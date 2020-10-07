@@ -54,8 +54,6 @@ where
             if count == 1 {
                 if (new_byte & 0x80) == 0x00 {
                     // ASCII
-                    staging = [0u8; 4];
-                    count = 0;
                     return Some(Ok(std::char::from_u32(new_byte as u32).unwrap()));
                 } else if (new_byte & 0xE0) == 0xC0 {
                     // Two bytes
@@ -79,8 +77,6 @@ where
                 bc -= 1;
 
                 if bc == 0 {
-                    staging = [0u8; 4];
-                    count = 0;
                     return Some(Ok(std::char::from_u32(point).unwrap()));
                 }
 

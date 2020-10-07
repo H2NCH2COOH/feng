@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::vec::Vec;
 
 mod chars;
+mod parser;
 
 pub mod error;
 
@@ -12,7 +13,7 @@ struct DebugInfo {
     charno: u64,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Atom {
     name: String,
 }
@@ -41,7 +42,7 @@ struct List {
 }
 
 #[derive(Clone)]
-enum Value {
+pub enum Value {
     Atom(Atom),
     List(Rc<List>),
     Lambda(Lambda),
