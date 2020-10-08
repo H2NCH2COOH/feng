@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum Error {
     IoErr(std::io::Error),
     Utf8Err([u8; 4]),

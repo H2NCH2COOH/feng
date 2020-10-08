@@ -1,5 +1,7 @@
+use std::io::Read;
+
 mod lang;
 
 fn main() {
-    println!("Hello, world!");
+    println!("{:?}", lang::parse(std::io::stdin().bytes()));
 }
