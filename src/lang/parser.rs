@@ -1,5 +1,4 @@
-use super::Error;
-use super::{Atom, List, Value};
+use super::{Atom, Error, List, Value};
 use std::rc::Rc;
 use std::vec::Vec;
 
@@ -17,7 +16,7 @@ impl<S> Source<S>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
-    fn new(mut stream: S) -> Self {
+    fn new(stream: S) -> Self {
         Self {
             lineno: 1,
             charno: 0,
@@ -177,9 +176,9 @@ where
     source.next()?; // Skip ')'
 
     let mut head = Rc::new(List::EmptyList);
-    for v in buf {
+    for v in buf.iter().rev() {
         head = Rc::new(List::Head {
-            head: v,
+            head: v.clone(),
             tail: head,
         })
     }

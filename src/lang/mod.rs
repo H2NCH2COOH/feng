@@ -1,10 +1,12 @@
 use std::collections::HashMap;
+use std::io::Write;
 use std::rc::Rc;
 use std::vec::Vec;
 
 mod chars;
 mod error;
 mod parser;
+mod printer;
 
 pub use error::Error;
 
@@ -55,4 +57,8 @@ where
     S: Iterator<Item = std::io::Result<u8>>,
 {
     parser::parse(chars::Chars::new(stream))
+}
+
+pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
+    printer::print(out, val)
 }
