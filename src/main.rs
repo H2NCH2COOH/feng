@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::io::Write;
 
 mod lang;
 
@@ -7,5 +8,6 @@ fn main() {
     let p = lang::parse(&mut bytes).unwrap();
     for ref v in p {
         lang::print(&mut std::io::stdout(), v).unwrap();
+        std::io::stdout().write(b"\n");
     }
 }
