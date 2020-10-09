@@ -17,13 +17,13 @@ struct DebugInfo {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-struct Atom {
+pub struct Atom {
     name: String,
 }
 
 struct Scope {
     parent: Option<Rc<Scope>>,
-    tab: HashMap<String, Value>,
+    table: HashMap<String, Value>,
 }
 
 #[derive(Clone)]
@@ -40,7 +40,7 @@ struct Lambda {
 }
 
 #[derive(Debug)]
-enum List {
+pub enum List {
     EmptyList,
     Head { head: Value, tail: Rc<List> },
 }
