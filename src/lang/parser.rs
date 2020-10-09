@@ -1,4 +1,4 @@
-use super::error::Error;
+use super::Error;
 use super::{Atom, List, Value};
 use std::rc::Rc;
 use std::vec::Vec;
@@ -120,7 +120,7 @@ where
             } else {
                 Err(syntax_err(source, format!("Unexcpected ')'")))
             }
-        },
+        }
         Some(_) => Ok(Some(Value::Atom(parse_atom(source)?))),
         None => unreachable!(),
     }
@@ -163,14 +163,12 @@ where
         match parse_value(source, true)? {
             Some(v) => {
                 buf.push(v);
-            },
-            None => {
-                match source.current() {
-                    Some(')') => break,
-                    Some(_) => unreachable!(),
-                    None => {
-                        return Err(syntax_err(source, format!("Excepting ')' found EOF")));
-                    },
+            }
+            None => match source.current() {
+                Some(')') => break,
+                Some(_) => unreachable!(),
+                None => {
+                    return Err(syntax_err(source, format!("Excepting ')' found EOF")));
                 }
             },
         }

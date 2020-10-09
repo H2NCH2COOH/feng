@@ -3,8 +3,10 @@ use std::rc::Rc;
 use std::vec::Vec;
 
 mod chars;
+mod error;
 mod parser;
-pub mod error;
+
+pub use error::Error;
 
 struct DebugInfo {
     filename: String,
@@ -38,10 +40,7 @@ struct Lambda {
 #[derive(Debug)]
 enum List {
     EmptyList,
-    Head {
-        head: Value,
-        tail: Rc<List>,
-    },
+    Head { head: Value, tail: Rc<List> },
 }
 
 #[derive(Clone, Debug)]
@@ -51,7 +50,7 @@ pub enum Value {
     //Lambda(Lambda),
 }
 
-pub fn parse<S>(stream: S) -> Result<Vec<Value>, error::Error>
+pub fn parse<S>(stream: S) -> Result<Vec<Value>, Error>
 where
     S: Iterator<Item = std::io::Result<u8>>,
 {
