@@ -50,7 +50,7 @@ pub enum Value {
     //Lambda(Lambda),
 }
 
-pub fn parse<S>(stream: S) -> Result<Vec<Value>, Error>
+pub fn parse<S>(stream: &mut S) -> Result<Vec<Value>, Error>
 where
     S: Iterator<Item = std::io::Result<u8>>,
 {

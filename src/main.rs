@@ -3,5 +3,6 @@ use std::io::Read;
 mod lang;
 
 fn main() {
-    println!("{:?}", lang::parse(std::io::stdin().bytes()));
+    let mut bytes = std::io::stdin().bytes();
+    println!("{:?}", lang::parse(&mut bytes));
 }

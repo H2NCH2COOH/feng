@@ -1,18 +1,18 @@
 use super::error::Error;
 
-pub struct Chars<B>
+pub struct Chars<'a, B>
 where
     B: Iterator<Item = std::io::Result<u8>>,
 {
-    bytes: B,
+    bytes: &'a mut B,
     ended: bool,
 }
 
-impl<B> Chars<B>
+impl<'a, B> Chars<'a, B>
 where
     B: Iterator<Item = std::io::Result<u8>>,
 {
-    pub fn new(bytes: B) -> Self {
+    pub fn new(bytes: &'a mut B) -> Self {
         Chars {
             bytes: bytes,
             ended: false,
@@ -20,7 +20,7 @@ where
     }
 }
 
-impl<B> Iterator for Chars<B>
+impl<'a, B> Iterator for Chars<'a, B>
 where
     B: Iterator<Item = std::io::Result<u8>>,
 {
