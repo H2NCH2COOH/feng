@@ -65,9 +65,9 @@ where
 {
     let (lineno, charno) = source.current_pos();
     Error::SyntaxErr {
-        lineno: lineno,
-        charno: charno,
-        msg: msg,
+        lineno,
+        charno,
+        msg,
     }
 }
 
@@ -83,11 +83,8 @@ where
         return Ok(result);
     }
 
-    loop {
-        match parse_value(&mut source, false)? {
-            Some(v) => result.push(v),
-            None => break,
-        }
+    while let Some(v) = parse_value(&mut source, false)? {
+        result.push(v);
     }
 
     Ok(result)
@@ -146,7 +143,7 @@ where
         source.next()?;
     }
 
-    Ok(Atom { name: name })
+    Ok(Atom { name })
 }
 
 fn parse_list<S>(source: &mut Source<S>) -> Result<Rc<List>, Error>

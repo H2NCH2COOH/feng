@@ -87,6 +87,6 @@ where
         }
 
         self.ended = true;
-        return Some(Err(Error::Utf8Err(staging)));
+        Some(Err(Error::Utf8Err(staging)))
     }
 }

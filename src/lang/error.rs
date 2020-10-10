@@ -22,3 +22,9 @@ impl std::fmt::Display for Error {
         }
     }
 }
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Error {
+        Error::IoErr(e)
+    }
+}

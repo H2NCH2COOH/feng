@@ -9,12 +9,12 @@ pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
 }
 
 fn print_atom<W: Write>(out: &mut W, atom: &Atom) -> Result<(), Error> {
-    write!(out, "{}", atom.name).map_err(|e| Error::IoErr(e))?;
+    write!(out, "{}", atom.name)?;
     Ok(())
 }
 
 fn print_list<W: Write>(out: &mut W, list: &List) -> Result<(), Error> {
-    write!(out, "(").map_err(|e| Error::IoErr(e))?;
+    write!(out, "(")?;
 
     let mut first = true;
     let mut ptr = list;
@@ -23,7 +23,7 @@ fn print_list<W: Write>(out: &mut W, list: &List) -> Result<(), Error> {
             List::EmptyList => break,
             List::Head { head, tail } => {
                 if !first {
-                    write!(out, " ").map_err(|e| Error::IoErr(e))?;
+                    write!(out, " ")?;
                 }
                 first = false;
                 print(out, head)?;
@@ -31,7 +31,7 @@ fn print_list<W: Write>(out: &mut W, list: &List) -> Result<(), Error> {
             }
         }
     }
-    write!(out, ")").map_err(|e| Error::IoErr(e))?;
+    write!(out, ")")?;
 
     Ok(())
 }
