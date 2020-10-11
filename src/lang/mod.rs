@@ -11,7 +11,7 @@ mod printer;
 pub use error::Error;
 
 struct DebugInfo {
-    filename: String,
+    filename: Option<String>,
     lineno: u64,
     charno: u64,
 }
@@ -21,21 +21,22 @@ pub struct Atom {
     name: String,
 }
 
+#[derive(Debug)]
 struct Scope {
     parent: Option<Rc<Scope>>,
-    table: HashMap<String, Value>,
+    table: HashMap<Atom, Value>,
 }
 
-#[derive(Clone)]
-enum Arguments {
+#[derive(Clone, Debug)]
+enum LambdaArgs {
     Vargs(Atom),
     Args(Vec<Atom>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Lambda {
     scope: Rc<Scope>,
-    args: Arguments,
+    args: LambdaArgs,
     body: Rc<List>,
 }
 
@@ -49,14 +50,15 @@ pub enum List {
 pub enum Value {
     Atom(Atom),
     List(Rc<List>),
-    //Lambda(Lambda),
+    Lambda(Lambda),
+    Function(String), // TODO
 }
 
-pub fn parse<S>(stream: &mut S) -> Result<Vec<Value>, Error>
+pub fn parse<S>(name: Option<&str>, stream: &mut S) -> Result<Vec<Value>, Error>
 where
     S: Iterator<Item = std::io::Result<u8>>,
 {
-    parser::parse(chars::Chars::new(stream))
+    parser::parse(name, chars::Chars::new(stream))
 }
 
 pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {

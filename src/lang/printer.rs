@@ -5,6 +5,8 @@ pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
     match val {
         Value::Atom(atom) => print_atom(out, atom),
         Value::List(list) => print_list(out, list),
+        Value::Lambda(lambda) => todo!(),
+        Value::Function(_) => todo!(),
     }
 }
 

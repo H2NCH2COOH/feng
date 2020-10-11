@@ -6,6 +6,7 @@ struct Source<S>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
+    name: Option<String>,
     lineno: u64,
     charno: u64,
     stream: S,
@@ -16,11 +17,12 @@ impl<S> Source<S>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
-    fn new(stream: S) -> Self {
+    fn new(name: Option<&str>, stream: S) -> Self {
         Self {
+            name: name.map(std::convert::Into::into),
             lineno: 1,
             charno: 0,
-            stream: stream,
+            stream,
             current: None,
         }
     }
@@ -57,6 +59,10 @@ where
     fn current_pos(&self) -> (u64, u64) {
         (self.lineno, self.charno)
     }
+
+    fn name(&self) -> Option<&str> {
+        self.name.as_ref().map(String::as_str)
+    }
 }
 
 fn syntax_err<S>(source: &Source<S>, msg: String) -> Error
@@ -71,11 +77,11 @@ where
     }
 }
 
-pub fn parse<S>(stream: S) -> Result<Vec<Value>, Error>
+pub fn parse<S>(name: Option<&str>, stream: S) -> Result<Vec<Value>, Error>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
-    let mut source = Source::new(stream);
+    let mut source = Source::new(name, stream);
     let mut result = Vec::new();
 
     // Handle empty source and make sure source.current() is valid
