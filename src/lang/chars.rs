@@ -14,7 +14,7 @@ where
 {
     pub fn new(bytes: &'a mut B) -> Self {
         Chars {
-            bytes: bytes,
+            bytes,
             ended: false,
         }
     }

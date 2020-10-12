@@ -19,7 +19,7 @@ where
 {
     fn new(name: Option<&str>, stream: S) -> Self {
         Self {
-            name: name.map(std::convert::Into::into),
+            name: name.map(String::from),
             lineno: 1,
             charno: 0,
             stream,
@@ -61,7 +61,7 @@ where
     }
 
     fn name(&self) -> Option<&str> {
-        self.name.as_ref().map(String::as_str)
+        self.name.as_deref()
     }
 }
 
