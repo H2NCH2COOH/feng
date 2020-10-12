@@ -52,28 +52,28 @@ where
             count += 1;
 
             if count == 1 {
-                if (new_byte & 0x80) == 0x00 {
+                if (new_byte & 0b1000_0000) == 0b0000_0000 {
                     // ASCII
                     return Some(Ok(std::char::from_u32(new_byte as u32).unwrap()));
-                } else if (new_byte & 0xE0) == 0xC0 {
+                } else if (new_byte & 0b1110_0000) == 0b1100_0000 {
                     // Two bytes
                     bc = 2;
-                    point = ((new_byte & 0x1F) as u32) << 6;
-                } else if (new_byte & 0xF0) == 0xE0 {
+                    point = ((new_byte & 0b0001_1111) as u32) << 6;
+                } else if (new_byte & 0b1111_0000) == 0b1110_0000 {
                     // Three bytes
                     bc = 3;
-                    point = ((new_byte & 0x0F) as u32) << 6;
-                } else if (new_byte & 0xF8) == 0xF0 {
+                    point = ((new_byte & 0b0000_1111) as u32) << 6;
+                } else if (new_byte & 0b1111_1000) == 0b1111_0000 {
                     // Four bytes
                     bc = 4;
-                    point = ((new_byte & 0x07) as u32) << 6;
+                    point = ((new_byte & 0b0000_0111) as u32) << 6;
                 } else {
                     break;
                 }
 
                 bc -= 1;
-            } else if bc > 0 && (new_byte & 0xC0) == 0x80 {
-                point |= (new_byte & 0x3F) as u32;
+            } else if bc > 0 && (new_byte & 0b1100_0000) == 0b1000_0000 {
+                point |= (new_byte & 0b0011_1111) as u32;
                 bc -= 1;
 
                 if bc == 0 {
