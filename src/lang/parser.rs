@@ -1,4 +1,4 @@
-use super::{Atom, Error, List, Value};
+use super::{Atom, Error, List, SourceInfo, Value};
 use std::rc::Rc;
 use std::vec::Vec;
 
@@ -6,9 +6,9 @@ struct Source<S>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
-    name: Option<String>,
-    lineno: u64,
-    charno: u64,
+    name: Rc<String>,
+    lineno: usize,
+    charno: usize,
     stream: S,
     current: Option<char>,
 }
@@ -17,9 +17,9 @@ impl<S> Source<S>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
-    fn new(name: Option<&str>, stream: S) -> Self {
+    fn new(name: &str, stream: S) -> Self {
         Self {
-            name: name.map(String::from),
+            name: Rc::new(name.to_owned()),
             lineno: 1,
             charno: 0,
             stream,
@@ -56,12 +56,12 @@ where
         self.current
     }
 
-    fn current_pos(&self) -> (u64, u64) {
-        (self.lineno, self.charno)
-    }
-
-    fn name(&self) -> Option<&str> {
-        self.name.as_deref()
+    fn current_pos(&self) -> SourceInfo {
+        SourceInfo {
+            name: self.name.clone(),
+            lineno: self.lineno,
+            charno: self.charno,
+        }
     }
 }
 
@@ -69,15 +69,11 @@ fn syntax_err<S>(source: &Source<S>, msg: String) -> Error
 where
     S: Iterator<Item = Result<char, Error>>,
 {
-    let (lineno, charno) = source.current_pos();
-    Error::SyntaxErr {
-        lineno,
-        charno,
-        msg,
-    }
+    let source_info = source.current_pos();
+    Error::SyntaxErr { source_info, msg }
 }
 
-pub fn parse<S>(name: Option<&str>, stream: S) -> Result<Vec<Value>, Error>
+pub fn parse<S>(name: &str, stream: S) -> Result<Vec<Value>, Error>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
@@ -133,6 +129,7 @@ where
     S: Iterator<Item = Result<char, Error>>,
 {
     let mut name = String::new();
+    let source_info = source.current_pos();
     loop {
         match source.current() {
             Some(c) => {
@@ -149,7 +146,10 @@ where
         source.next()?;
     }
 
-    Ok(Atom { name })
+    Ok(Atom {
+        name,
+        source_info: Some(source_info),
+    })
 }
 
 fn parse_list<S>(source: &mut Source<S>) -> Result<Rc<List>, Error>
@@ -157,6 +157,8 @@ where
     S: Iterator<Item = Result<char, Error>>,
 {
     assert!(source.current().unwrap() == '(');
+
+    let source_info = source.current_pos();
 
     source.next()?; // Skip '('
 

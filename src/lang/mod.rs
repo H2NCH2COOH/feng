@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
@@ -10,15 +11,17 @@ mod printer;
 
 pub use error::Error;
 
-struct DebugInfo {
-    filename: Option<String>,
-    lineno: u64,
-    charno: u64,
+#[derive(Clone, Debug)]
+pub struct SourceInfo {
+    name: Rc<String>,
+    lineno: usize,
+    charno: usize,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Debug)]
 pub struct Atom {
     name: String,
+    source_info: Option<SourceInfo>,
 }
 
 #[derive(Debug)]
@@ -54,7 +57,27 @@ pub enum Value {
     Function(String), // TODO
 }
 
-pub fn parse<S>(name: Option<&str>, stream: &mut S) -> Result<Vec<Value>, Error>
+impl Ord for Atom {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
+impl PartialOrd for Atom {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Atom {
+    fn eq(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+impl Eq for Atom {}
+
+pub fn parse<S>(name: &str, stream: &mut S) -> Result<Vec<Value>, Error>
 where
     S: Iterator<Item = std::io::Result<u8>>,
 {

@@ -1,10 +1,11 @@
+use super::SourceInfo;
+
 #[derive(Debug)]
 pub enum Error {
     IoErr(std::io::Error),
     Utf8Err([u8; 4]),
     SyntaxErr {
-        lineno: u64,
-        charno: u64,
+        source_info: SourceInfo,
         msg: String,
     },
 }
@@ -14,11 +15,11 @@ impl std::fmt::Display for Error {
         match self {
             Error::IoErr(e) => write!(f, "Io Error: {}", e),
             Error::Utf8Err(e) => write!(f, "Invalid bytes as UTF-8: {:?}", e),
-            Error::SyntaxErr {
-                lineno,
-                charno,
-                msg,
-            } => write!(f, "Syntax error: {}\nAt {}:{}", msg, lineno, charno),
+            Error::SyntaxErr { source_info, msg } => write!(
+                f,
+                "Syntax error on {} at {}:{}:\n{}",
+                source_info.name, source_info.lineno, source_info.charno, msg
+            ),
         }
     }
 }
