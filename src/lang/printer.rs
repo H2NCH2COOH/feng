@@ -22,8 +22,12 @@ fn print_list<W: Write>(out: &mut W, list: &List) -> Result<(), Error> {
     let mut ptr = list;
     loop {
         match ptr {
-            List::EmptyList => break,
-            List::Head { head, tail } => {
+            List::EmptyList { source_info: _ } => break,
+            List::Head {
+                head,
+                tail,
+                source_info: _,
+            } => {
                 if !first {
                     write!(out, " ")?;
                 }

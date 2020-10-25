@@ -45,8 +45,14 @@ struct Lambda {
 
 #[derive(Debug)]
 pub enum List {
-    EmptyList,
-    Head { head: Value, tail: Rc<List> },
+    EmptyList {
+        source_info: Option<SourceInfo>,
+    },
+    Head {
+        head: Value,
+        tail: Rc<List>,
+        source_info: Option<SourceInfo>,
+    },
 }
 
 #[derive(Clone, Debug)]

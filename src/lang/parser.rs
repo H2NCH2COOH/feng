@@ -180,13 +180,23 @@ where
 
     source.next()?; // Skip ')'
 
-    let mut head = Rc::new(List::EmptyList);
+    let mut head = Rc::new(List::EmptyList { source_info: None });
     for v in buf.iter().rev() {
         head = Rc::new(List::Head {
             head: v.clone(),
             tail: head,
+            source_info: None,
         })
     }
+
+    match Rc::get_mut(&mut head).unwrap() {
+        List::EmptyList { source_info: si } => *si = Some(source_info),
+        List::Head {
+            head: _,
+            tail: _,
+            source_info: si,
+        } => *si = Some(source_info),
+    };
 
     Ok(head)
 }
