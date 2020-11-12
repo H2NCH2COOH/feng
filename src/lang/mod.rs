@@ -31,6 +31,11 @@ struct Scope {
     table: HashMap<Atom, Value>,
 }
 
+#[derive(Debug)]
+struct ClosureScope {
+    table: HashMap<Atom, Value>,
+}
+
 #[derive(Clone, Debug)]
 enum LambdaArgs {
     Vargs(Atom),
@@ -39,7 +44,7 @@ enum LambdaArgs {
 
 #[derive(Clone, Debug)]
 struct Lambda {
-    scope: Rc<Scope>,
+    closure_scope: Rc<ClosureScope>,
     args: LambdaArgs,
     body: Rc<List>,
 }
@@ -57,11 +62,16 @@ pub enum List {
 }
 
 #[derive(Clone, Debug)]
+pub enum Function {
+    //TODO
+}
+
+#[derive(Clone, Debug)]
 pub enum Value {
     Atom(Atom),
     List(Rc<List>),
     Lambda(Lambda),
-    Function(String), // TODO
+    Function(Function),
 }
 
 impl Ord for Atom {
@@ -90,6 +100,15 @@ impl Hash for Atom {
     }
 }
 
+impl Atom {
+    fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            source_info: None,
+        }
+    }
+}
+
 pub fn parse<S>(name: &str, stream: &mut S) -> Result<Vec<Value>, Error>
 where
     S: Iterator<Item = std::io::Result<u8>>,
@@ -99,4 +118,67 @@ where
 
 pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
     printer::print(out, val)
+}
+
+fn lookup(atom: &Atom, scope: &Scope) -> Option<Value> {
+    match scope.table.get(atom) {
+        Some(v) => Some(v.clone()),
+        None => match &scope.parent {
+            Some(p) => lookup(atom, &p),
+            None => None,
+        },
+    }
+}
+
+fn eval_args(list: &Rc<List>, scope: &Rc<Scope>) -> Result<List, Error> {
+    todo!()
+}
+
+fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
+    let mut curr_scope = Rc::new(Scope {
+        parent: Some(scope.clone()),
+        table: HashMap::new(),
+    });
+
+    loop {
+        match val {
+            // Lookup Atom and return itself when not found
+            Value::Atom(atom) => {
+                return Ok(lookup(atom, &curr_scope).unwrap_or(Value::Atom(atom.clone())))
+            }
+            Value::List(list) => match list.as_ref() {
+                List::EmptyList { source_info: _ } => {
+                    return Ok(Value::List(Rc::new(List::EmptyList { source_info: None })))
+                }
+                List::Head {
+                    head,
+                    tail,
+                    source_info,
+                } => {
+                    let val = eval(head, scope)?;
+                    match val {
+                        Value::Function(_) => {
+                            let args = eval_args(tail, &curr_scope)?;
+                            todo!()
+                        }
+                        Value::Lambda(Lambda {
+                            closure_scope,
+                            args,
+                            body,
+                        }) => {
+                            let args = eval_args(tail, &curr_scope)?;
+                            todo!()
+                        }
+                        _ => {
+                            return Err(Error::ValueErr {
+                                source_info: source_info.clone().unwrap(),
+                                msg: format!("Can't call value: {:?}", val),
+                            })
+                        }
+                    }
+                }
+            },
+            _ => panic!("Can't evaluate {:?}", val),
+        }
+    }
 }

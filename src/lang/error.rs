@@ -8,6 +8,10 @@ pub enum Error {
         source_info: SourceInfo,
         msg: String,
     },
+    ValueErr {
+        source_info: SourceInfo,
+        msg: String,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -18,6 +22,11 @@ impl std::fmt::Display for Error {
             Error::SyntaxErr { source_info, msg } => write!(
                 f,
                 "Syntax error on {} at {}:{}:\n{}",
+                source_info.name, source_info.lineno, source_info.charno, msg
+            ),
+            Error::ValueErr { source_info, msg } => write!(
+                f,
+                "Value error on {} at {}:{}:\n{}",
                 source_info.name, source_info.lineno, source_info.charno, msg
             ),
         }
