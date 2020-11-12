@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::rc::Rc;
 use std::vec::Vec;
@@ -82,6 +83,12 @@ impl PartialEq for Atom {
 }
 
 impl Eq for Atom {}
+
+impl Hash for Atom {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
+}
 
 pub fn parse<S>(name: &str, stream: &mut S) -> Result<Vec<Value>, Error>
 where
