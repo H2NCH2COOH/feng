@@ -109,6 +109,22 @@ impl Atom {
     }
 }
 
+impl List {
+    fn empty() -> Rc<Self> {
+        Rc::new(List::EmptyList {
+            source_info: None,
+        })
+    }
+}
+
+fn cons(head: &Value, tail: &Rc<List>) -> Rc<List> {
+    Rc::new(List::Head {
+        head: head.clone(),
+        tail: tail.clone(),
+        source_info: None,
+    })
+}
+
 pub fn parse<S>(name: &str, stream: &mut S) -> Result<Vec<Value>, Error>
 where
     S: Iterator<Item = std::io::Result<u8>>,
@@ -130,8 +146,18 @@ fn lookup(atom: &Atom, scope: &Scope) -> Option<Value> {
     }
 }
 
-fn eval_args(list: &Rc<List>, scope: &Rc<Scope>) -> Result<List, Error> {
-    todo!()
+fn eval_args(list: &Rc<List>, scope: &Rc<Scope>) -> Result<Rc<List>, Error> {
+    match list.as_ref() {
+        List::EmptyList{ source_info: _ } => Ok(List::empty()),
+        List::Head {
+            head,
+            tail,
+            source_info,
+        } => {
+            let v = eval(head, scope)?;
+            Ok(cons(&v, &eval_args(tail, scope)?))
+        },
+    }
 }
 
 fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
@@ -147,8 +173,9 @@ fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
                 return Ok(lookup(atom, &curr_scope).unwrap_or(Value::Atom(atom.clone())))
             }
             Value::List(list) => match list.as_ref() {
+                // Empty list as itself
                 List::EmptyList { source_info: _ } => {
-                    return Ok(Value::List(Rc::new(List::EmptyList { source_info: None })))
+                    return Ok(Value::List(List::empty()))
                 }
                 List::Head {
                     head,
@@ -158,7 +185,6 @@ fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
                     let val = eval(head, scope)?;
                     match val {
                         Value::Function(_) => {
-                            let args = eval_args(tail, &curr_scope)?;
                             todo!()
                         }
                         Value::Lambda(Lambda {
