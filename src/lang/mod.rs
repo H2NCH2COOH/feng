@@ -111,9 +111,7 @@ impl Atom {
 
 impl List {
     fn empty() -> Rc<Self> {
-        Rc::new(List::EmptyList {
-            source_info: None,
-        })
+        Rc::new(List::EmptyList { source_info: None })
     }
 }
 
@@ -148,7 +146,7 @@ fn lookup(atom: &Atom, scope: &Scope) -> Option<Value> {
 
 fn eval_args(list: &Rc<List>, scope: &Rc<Scope>) -> Result<Rc<List>, Error> {
     match list.as_ref() {
-        List::EmptyList{ source_info: _ } => Ok(List::empty()),
+        List::EmptyList { source_info: _ } => Ok(List::empty()),
         List::Head {
             head,
             tail,
@@ -156,7 +154,7 @@ fn eval_args(list: &Rc<List>, scope: &Rc<Scope>) -> Result<Rc<List>, Error> {
         } => {
             let v = eval(head, scope)?;
             Ok(cons(&v, &eval_args(tail, scope)?))
-        },
+        }
     }
 }
 
@@ -174,9 +172,7 @@ fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
             }
             Value::List(list) => match list.as_ref() {
                 // Empty list as itself
-                List::EmptyList { source_info: _ } => {
-                    return Ok(Value::List(List::empty()))
-                }
+                List::EmptyList { source_info: _ } => return Ok(Value::List(List::empty())),
                 List::Head {
                     head,
                     tail,
@@ -184,9 +180,7 @@ fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
                 } => {
                     let val = eval(head, scope)?;
                     match val {
-                        Value::Function(_) => {
-                            todo!()
-                        }
+                        Value::Function(_) => todo!(),
                         Value::Lambda(Lambda {
                             closure_scope,
                             args,
