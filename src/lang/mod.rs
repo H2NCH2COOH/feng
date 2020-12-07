@@ -32,13 +32,13 @@ struct Scope {
 }
 
 #[derive(Clone, Debug)]
-enum LambdaArgs {
+pub enum LambdaArgs {
     Vargs(Atom),
     Args(Vec<Atom>),
 }
 
 #[derive(Clone, Debug)]
-struct Lambda {
+pub struct Lambda {
     args: LambdaArgs,
     body: Rc<List>,
 }
@@ -153,45 +153,32 @@ fn eval_args(list: &Rc<List>, scope: &Rc<Scope>) -> Result<Rc<List>, Error> {
 }
 
 fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
-    let mut curr_scope = Rc::new(Scope {
-        parent: Some(scope.clone()),
-        table: HashMap::new(),
-    });
-
-    loop {
-        match val {
-            // Lookup Atom and return itself when not found
-            Value::Atom(atom) => {
-                return Ok(lookup(atom, &curr_scope).unwrap_or(Value::Atom(atom.clone())))
-            }
-            Value::List(list) => match list.as_ref() {
-                // Empty list as itself
-                List::EmptyList { source_info: _ } => return Ok(Value::List(List::empty())),
-                List::Head {
-                    head,
-                    tail,
-                    source_info,
-                } => {
-                    let val = eval(head, scope)?;
-                    match val {
-                        Value::Function(_) => todo!(),
-                        Value::Lambda(Lambda {
-                            args,
-                            body,
-                        }) => {
-                            let args = eval_args(tail, &curr_scope)?;
-                            todo!()
-                        }
-                        _ => {
-                            return Err(Error::ValueErr {
-                                source_info: source_info.clone().unwrap(),
-                                msg: format!("Can't call value: {:?}", val),
-                            })
-                        }
+    match val {
+        // Lookup Atom and return itself when not found
+        Value::Atom(atom) => {
+            return Ok(lookup(atom, &scope).unwrap_or(Value::Atom(atom.clone())))
+        }
+        Value::List(list) => match list.as_ref() {
+            // Empty list as itself
+            List::EmptyList { source_info: _ } => return Ok(Value::List(list.clone())),
+            List::Head {
+                head,
+                tail,
+                source_info,
+            } => {
+                let val = eval(head, scope)?;
+                match val {
+                    Value::Function(_) => todo!(),
+                    Value::Lambda(ref lambda) => todo!(),
+                    _ => {
+                        return Err(Error::ValueErr {
+                            source_info: source_info.clone().unwrap(),
+                            msg: format!("Can't call value: {:?}", val),
+                        })
                     }
                 }
-            },
-            _ => panic!("Can't evaluate {:?}", val),
-        }
+            }
+        },
+        _ => panic!("Can't evaluate {:?}", val),
     }
 }
