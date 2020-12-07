@@ -31,11 +31,6 @@ struct Scope {
     table: HashMap<Atom, Value>,
 }
 
-#[derive(Debug)]
-struct ClosureScope {
-    table: HashMap<Atom, Value>,
-}
-
 #[derive(Clone, Debug)]
 enum LambdaArgs {
     Vargs(Atom),
@@ -44,7 +39,6 @@ enum LambdaArgs {
 
 #[derive(Clone, Debug)]
 struct Lambda {
-    closure_scope: Rc<ClosureScope>,
     args: LambdaArgs,
     body: Rc<List>,
 }
@@ -182,7 +176,6 @@ fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
                     match val {
                         Value::Function(_) => todo!(),
                         Value::Lambda(Lambda {
-                            closure_scope,
                             args,
                             body,
                         }) => {
