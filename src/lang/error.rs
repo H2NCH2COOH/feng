@@ -12,6 +12,11 @@ pub enum Error {
         source_info: SourceInfo,
         msg: String,
     },
+    ArgumentNumberErr {
+        source_info: SourceInfo,
+        expected: usize,
+        actual: usize,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -28,6 +33,15 @@ impl std::fmt::Display for Error {
                 f,
                 "Value error on {} at {}:{}:\n{}",
                 source_info.name, source_info.lineno, source_info.charno, msg
+            ),
+            Error::ArgumentNumberErr {
+                source_info,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "Invalid number of argument to a lambda on {} at {}:{}:\nExpected: {}, Actual: {}",
+                source_info.name, source_info.lineno, source_info.charno, expected, actual
             ),
         }
     }
