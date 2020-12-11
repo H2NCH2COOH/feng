@@ -26,12 +26,19 @@ pub struct Atom {
 }
 
 #[derive(Debug)]
+struct TailRecursion {
+    source_info: Option<SourceInfo>,
+    args: Rc<List>,
+}
+
+#[derive(Debug)]
 struct Scope {
     parent: Option<Rc<Scope>>,
     table: HashMap<Atom, Value>,
+    recursion_point: Option<Lambda>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LambdaArgs {
     Vargs(Atom),
     Args(Vec<Atom>),
@@ -87,6 +94,14 @@ impl PartialEq for Atom {
 }
 
 impl Eq for Atom {}
+
+impl PartialEq for Lambda {
+    fn eq(&self, other: &Self) -> bool {
+        self.args == other.args && Rc::ptr_eq(&self.body, &other.body)
+    }
+}
+
+impl Eq for Lambda {}
 
 impl Hash for Atom {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -152,32 +167,42 @@ fn eval_args(list: &Rc<List>, scope: &Rc<Scope>) -> Result<Rc<List>, Error> {
     }
 }
 
+enum Return {
+    Value(Value),
+    TailRecursion(TailRecursion),
+}
+
+fn call(
+    val: &Value,
+    args: &Rc<List>,
+    scope: &Rc<Scope>,
+    source_info: &Option<SourceInfo>,
+) -> Result<Return, Error> {
+    match val {
+        Value::Function(_) => todo!(),
+        Value::Lambda(ref lambda) => todo!(),
+        _ => Err(Error::ValueErr {
+            source_info: source_info.clone().unwrap(),
+            msg: format!("Can't call value: {:?}", val),
+        }),
+    }
+}
+
 fn eval(val: &Value, scope: &Rc<Scope>) -> Result<Value, Error> {
     match val {
         // Lookup Atom and return itself when not found
-        Value::Atom(atom) => {
-            return Ok(lookup(atom, &scope).unwrap_or(Value::Atom(atom.clone())))
-        }
+        Value::Atom(atom) => Ok(lookup(atom, &scope).unwrap_or(Value::Atom(atom.clone()))),
         Value::List(list) => match list.as_ref() {
             // Empty list as itself
-            List::EmptyList { source_info: _ } => return Ok(Value::List(list.clone())),
+            List::EmptyList { source_info: _ } => Ok(Value::List(list.clone())),
             List::Head {
                 head,
                 tail,
                 source_info,
-            } => {
-                let val = eval(head, scope)?;
-                match val {
-                    Value::Function(_) => todo!(),
-                    Value::Lambda(ref lambda) => todo!(),
-                    _ => {
-                        return Err(Error::ValueErr {
-                            source_info: source_info.clone().unwrap(),
-                            msg: format!("Can't call value: {:?}", val),
-                        })
-                    }
-                }
-            }
+            } => match call(&eval(head, scope)?, &tail, scope, &source_info)? {
+                Return::Value(value) => Ok(value),
+                _ => panic!("`call` must return a Value to `eval`"),
+            },
         },
         _ => panic!("Can't evaluate {:?}", val),
     }
