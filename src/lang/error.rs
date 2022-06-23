@@ -1,4 +1,4 @@
-use super::SourceInfo;
+use super::source::SourceInfo;
 
 #[derive(Debug)]
 pub enum Error {

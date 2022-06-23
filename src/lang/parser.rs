@@ -1,4 +1,5 @@
-use super::{Atom, Error, List, SourceInfo, Value};
+use super::error::Error;
+use super::source::{Atom, List, SourceInfo, Value};
 use std::rc::Rc;
 use std::vec::Vec;
 
@@ -6,7 +7,7 @@ struct Source<S>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
-    name: Rc<String>,
+    name: Rc<str>,
     lineno: usize,
     charno: usize,
     stream: S,
@@ -19,7 +20,7 @@ where
 {
     fn new(name: &str, stream: S) -> Self {
         Self {
-            name: Rc::new(name.to_owned()),
+            name: Rc::from(name),
             lineno: 1,
             charno: 0,
             stream,
@@ -147,7 +148,7 @@ where
     }
 
     Ok(Atom {
-        name,
+        name: Box::from(name),
         source_info: Some(source_info),
     })
 }
