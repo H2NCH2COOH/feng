@@ -11,23 +11,17 @@ pub struct SourceInfo {
 #[derive(Clone, Debug)]
 pub struct Atom {
     pub name: Box<str>,
-    pub source_info: Option<SourceInfo>,
+    pub source_info: SourceInfo,
 }
 
-#[derive(Debug)]
-pub enum List {
-    EmptyList {
-        source_info: Option<SourceInfo>,
-    },
-    Head {
-        head: Value,
-        tail: Rc<List>,
-        source_info: Option<SourceInfo>,
-    },
+#[derive(Clone, Debug)]
+pub struct List {
+    pub list: Box<[Value]>,
+    pub source_info: SourceInfo,
 }
 
 #[derive(Clone, Debug)]
 pub enum Value {
     Atom(Atom),
-    List(Rc<List>),
+    List(List),
 }

@@ -20,7 +20,7 @@ where
 {
     fn new(name: &str, stream: S) -> Self {
         Self {
-            name: Rc::from(name),
+            name: name.into(),
             lineno: 1,
             charno: 0,
             stream,
@@ -148,12 +148,12 @@ where
     }
 
     Ok(Atom {
-        name: Box::from(name),
-        source_info: Some(source_info),
+        name: name.into(),
+        source_info: source_info,
     })
 }
 
-fn parse_list<S>(source: &mut Source<S>) -> Result<Rc<List>, Error>
+fn parse_list<S>(source: &mut Source<S>) -> Result<List, Error>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
@@ -181,23 +181,8 @@ where
 
     source.next()?; // Skip ')'
 
-    let mut head = Rc::new(List::EmptyList { source_info: None });
-    for v in buf.iter().rev() {
-        head = Rc::new(List::Head {
-            head: v.clone(),
-            tail: head,
-            source_info: None,
-        })
-    }
-
-    match Rc::get_mut(&mut head).unwrap() {
-        List::EmptyList { source_info: si } => *si = Some(source_info),
-        List::Head {
-            head: _,
-            tail: _,
-            source_info: si,
-        } => *si = Some(source_info),
-    };
-
-    Ok(head)
+    Ok(List {
+        list: buf.into(),
+        source_info,
+    })
 }
