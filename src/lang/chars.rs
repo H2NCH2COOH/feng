@@ -40,7 +40,7 @@ where
                 Some(Ok(b)) => b,
                 Some(Err(e)) => {
                     self.ended = true;
-                    return Some(Err(Error::IoErr(e)));
+                    return Some(Err(Error::Io(e)));
                 }
                 None => {
                     self.ended = true;
@@ -87,6 +87,6 @@ where
         }
 
         self.ended = true;
-        Some(Err(Error::Utf8Err(staging)))
+        Some(Err(Error::Utf8(staging)))
     }
 }

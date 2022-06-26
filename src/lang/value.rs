@@ -4,7 +4,6 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
-use std::vec::Vec;
 
 #[derive(Clone, Debug)]
 pub struct Atom {

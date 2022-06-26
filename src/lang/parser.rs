@@ -71,7 +71,7 @@ where
     S: Iterator<Item = Result<char, Error>>,
 {
     let source_info = source.current_pos();
-    Error::SyntaxErr { source_info, msg }
+    Error::Syntax { source_info, msg }
 }
 
 pub fn parse<S>(name: &str, stream: S) -> Result<Vec<Value>, Error>
@@ -117,7 +117,7 @@ where
             if within_list {
                 Ok(None)
             } else {
-                Err(syntax_err(source, format!("Unexcpected ')'")))
+                Err(syntax_err(source, "Unexcpected ')'".to_string()))
             }
         }
         Some(_) => Ok(Some(Value::Atom(parse_atom(source)?))),
@@ -131,25 +131,22 @@ where
 {
     let mut name = String::new();
     let source_info = source.current_pos();
-    loop {
-        match source.current() {
-            Some(c) => {
-                if c.is_whitespace() || c == ')' {
-                    break;
-                } else if c == '(' {
-                    return Err(syntax_err(source, format!("Invalid charactor '('")));
-                } else {
-                    name.push(c);
-                }
-            }
-            None => break,
+
+    while let Some(c) = source.current() {
+        if c.is_whitespace() || c == ')' {
+            break;
+        } else if c == '(' {
+            return Err(syntax_err(source, "Invalid charactor '('".to_string()));
+        } else {
+            name.push(c);
         }
+
         source.next()?;
     }
 
     Ok(Atom {
         name: name.into(),
-        source_info: source_info,
+        source_info,
     })
 }
 
@@ -173,7 +170,7 @@ where
                 Some(')') => break,
                 Some(_) => unreachable!(),
                 None => {
-                    return Err(syntax_err(source, format!("Excepting ')' found EOF")));
+                    return Err(syntax_err(source, "Excepting ')' found EOF".to_string()));
                 }
             },
         }

@@ -14,6 +14,6 @@ fn main() {
 
     for ref v in p.unwrap() {
         lang::print(&mut std::io::stdout(), &v.into()).unwrap();
-        std::io::stdout().write(b"\n");
+        std::io::stdout().write_all(b"\n").unwrap();
     }
 }
