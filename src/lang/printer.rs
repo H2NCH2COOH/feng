@@ -1,12 +1,11 @@
-use super::{Atom, Error, List, Value};
+use super::error::Error;
+use super::value::{Atom, List, Value};
 use std::io::Write;
 
 pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
     match val {
         Value::Atom(atom) => print_atom(out, atom),
         Value::List(list) => print_list(out, list),
-        Value::Lambda(lambda) => todo!(),
-        Value::Function(_) => todo!(),
     }
 }
 
@@ -22,12 +21,8 @@ fn print_list<W: Write>(out: &mut W, list: &List) -> Result<(), Error> {
     let mut ptr = list;
     loop {
         match ptr {
-            List::EmptyList { source_info: _ } => break,
-            List::Head {
-                head,
-                tail,
-                source_info: _,
-            } => {
+            List::EmptyList {} => break,
+            List::Head { head, tail } => {
                 if !first {
                     write!(out, " ")?;
                 }
