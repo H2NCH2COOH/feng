@@ -7,7 +7,6 @@ fn main() {
     let mut bytes = std::io::stdin().bytes();
     let p = lang::parse("STDIN", &mut bytes);
 
-
     if let Err(e) = p {
         println!("{}", e);
         return;

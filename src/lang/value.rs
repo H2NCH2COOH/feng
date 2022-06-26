@@ -71,7 +71,9 @@ impl List {
 
 impl From<&source::Atom> for Value {
     fn from(src: &source::Atom) -> Self {
-        Value::Atom(Atom { name: src.name.clone() })
+        Value::Atom(Atom {
+            name: src.name.clone(),
+        })
     }
 }
 
