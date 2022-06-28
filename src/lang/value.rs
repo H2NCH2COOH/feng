@@ -29,6 +29,8 @@ pub struct Fexpr {
 
 #[derive(Clone, Debug)]
 pub enum Value {
+    SourceAtom(source::Atom),
+    SourceList(source::List),
     Atom(Atom),
     List(Rc<List>),
     Fexpr(Fexpr),
@@ -74,33 +76,19 @@ impl List {
     }
 }
 
-impl From<&source::Atom> for Value {
+impl From<&source::Atom> for Atom {
     fn from(src: &source::Atom) -> Self {
-        Value::Atom(Atom {
+        Self {
             name: src.name.clone(),
-        })
-    }
-}
-
-impl From<&source::List> for Value {
-    fn from(src: &source::List) -> Self {
-        let mut head = List::empty();
-        for v in src.list.iter().rev() {
-            head = Rc::new(List::Head {
-                head: v.into(),
-                tail: head,
-            })
         }
-
-        Value::List(head)
     }
 }
 
 impl From<&source::Value> for Value {
     fn from(src: &source::Value) -> Self {
         match src {
-            source::Value::Atom(a) => a.into(),
-            source::Value::List(l) => l.into(),
+            source::Value::Atom(a) => Value::SourceAtom(a.clone()),
+            source::Value::List(l) => Value::SourceList(l.clone()),
         }
     }
 }
@@ -146,6 +134,8 @@ impl std::fmt::Display for Value {
         match self {
             Self::Atom(atom) => write!(f, "{}", atom),
             Self::List(list) => write!(f, "{}", list),
+            Self::SourceAtom(source_atom) => write!(f, "{}", source_atom),
+            Self::SourceList(source_list) => write!(f, "{}", source_list),
             Self::Fexpr(fexpr) => write!(f, "{}", fexpr),
         }
     }

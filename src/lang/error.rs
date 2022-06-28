@@ -14,7 +14,7 @@ pub enum Error {
     CantEval {
         source_info: SourceInfo,
         val: super::value::Value,
-    }
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -26,7 +26,9 @@ impl std::fmt::Display for Error {
                 write!(f, "Syntax error: {}\n\tAt {}", msg, source_info)
             }
             Error::NoUpCtx { source_info } => write!(f, "Can't go upwards\n\tAt {}", source_info),
-            Error::CantEval { source_info, val } => write!(f, "Can't eval value: {}\n\tAt {}", val, source_info),
+            Error::CantEval { source_info, val } => {
+                write!(f, "Can't eval value: {}\n\tAt {}", val, source_info)
+            }
         }
     }
 }

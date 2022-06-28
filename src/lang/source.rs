@@ -1,3 +1,4 @@
+use super::value;
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
@@ -28,5 +29,47 @@ pub enum Value {
 impl std::fmt::Display for SourceInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}:{}", self.name, self.lineno, self.charno)
+    }
+}
+
+impl std::fmt::Display for Atom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "`{}'", self.name)
+    }
+}
+
+impl std::fmt::Display for List {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(")?;
+        if !self.list.is_empty() {
+            write!(f, "{}", self.list[0])?;
+            for v in &self.list[1..] {
+                write!(f, " {}", v)?;
+            }
+        }
+        write!(f, ")")
+    }
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Atom(atom) => write!(f, "{}", atom),
+            Value::List(list) => write!(f, "{}", list),
+        }
+    }
+}
+
+impl From<&List> for Rc<value::List> {
+    fn from(src: &List) -> Self {
+        let mut head = value::List::empty();
+        for v in src.list.iter().rev() {
+            head = Rc::new(value::List::Head {
+                head: v.into(),
+                tail: head,
+            })
+        }
+
+        head
     }
 }
