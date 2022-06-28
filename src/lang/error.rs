@@ -8,10 +8,8 @@ pub enum Error {
         source_info: SourceInfo,
         msg: String,
     },
-    BadCtxLevel {
+    NoUpCtx {
         source_info: SourceInfo,
-        level_required: u64,
-        level_max: u64,
     },
 }
 
@@ -22,17 +20,13 @@ impl std::fmt::Display for Error {
             Error::Utf8(e) => write!(f, "Invalid bytes as UTF-8: {:?}", e),
             Error::Syntax { source_info, msg } => write!(
                 f,
-                "Syntax error on {} at {}:{}:\n{}",
+                "Syntax error at {}:{}:{}:\n{}",
                 source_info.name, source_info.lineno, source_info.charno, msg
             ),
-            Error::BadCtxLevel {
-                source_info,
-                level_required,
-                level_max,
-            } => write!(
+            Error::NoUpCtx { source_info } => write!(
                 f,
-                "Bad context level required: {}, max {} on {}:{}:{}",
-                level_required, level_max, source_info.name, source_info.lineno, source_info.charno
+                "Can't go upwards at {}:{}:{}",
+                source_info.name, source_info.lineno, source_info.charno
             ),
         }
     }
