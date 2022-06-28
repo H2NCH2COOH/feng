@@ -1,5 +1,5 @@
 use super::error::Error;
-use super::value::{Atom, Fexpr, List, Value};
+use super::value::{ArgList, Atom, Fexpr, List, Value};
 use std::io::Write;
 
 pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
@@ -34,10 +34,27 @@ fn print_list<W: Write>(out: &mut W, list: &List) -> Result<(), Error> {
         }
     }
     write!(out, ")")?;
-
     Ok(())
 }
 
 fn print_fexpr<W: Write>(out: &mut W, fexpr: &Fexpr) -> Result<(), Error> {
-    todo!()
+    write!(out, "(fexpr! ")?;
+    match &fexpr.arg_list {
+        ArgList::Args(list) => {
+            if list.is_empty() {
+                write!(out, "() ")?;
+            } else {
+                write!(out, "(")?;
+                write!(out, "{}", list[0].name)?;
+                for arg in &list[1..] {
+                    write!(out, " {}", arg.name)?;
+                }
+                write!(out, ") ")?
+            }
+        }
+        ArgList::Vargs(atom) => write!(out, "{} ", atom.name)?,
+    };
+    print_list(out, &fexpr.body);
+    write!(out, ")")?;
+    Ok(())
 }

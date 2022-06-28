@@ -18,16 +18,10 @@ impl std::fmt::Display for Error {
         match self {
             Error::Io(e) => write!(f, "Io Error: {}", e),
             Error::Utf8(e) => write!(f, "Invalid bytes as UTF-8: {:?}", e),
-            Error::Syntax { source_info, msg } => write!(
-                f,
-                "Syntax error at {}:{}:{}:\n{}",
-                source_info.name, source_info.lineno, source_info.charno, msg
-            ),
-            Error::NoUpCtx { source_info } => write!(
-                f,
-                "Can't go upwards at {}:{}:{}",
-                source_info.name, source_info.lineno, source_info.charno
-            ),
+            Error::Syntax { source_info, msg } => {
+                write!(f, "Syntax error: {}\n\tAt {}", msg, source_info)
+            }
+            Error::NoUpCtx { source_info } => write!(f, "Can't go upwards\n\tAt {}", source_info),
         }
     }
 }

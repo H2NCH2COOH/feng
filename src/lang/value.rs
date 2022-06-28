@@ -11,7 +11,7 @@ pub struct Atom {
 
 #[derive(Debug)]
 pub enum List {
-    EmptyList {},
+    EmptyList,
     Head { head: Value, tail: Rc<List> },
 }
 
@@ -23,8 +23,8 @@ pub enum ArgList {
 
 #[derive(Clone, Debug)]
 pub struct Fexpr {
-    arg_list: ArgList,
-    body: Rc<List>,
+    pub arg_list: ArgList,
+    pub body: Rc<List>,
 }
 
 #[derive(Clone, Debug)]
@@ -70,7 +70,7 @@ impl Atom {
 
 impl List {
     pub fn empty() -> Rc<Self> {
-        Rc::new(List::EmptyList {})
+        Rc::new(List::EmptyList)
     }
 }
 
@@ -101,6 +101,52 @@ impl From<&source::Value> for Value {
         match src {
             source::Value::Atom(a) => a.into(),
             source::Value::List(l) => l.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for Atom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "`{}'", self.name)
+    }
+}
+
+impl std::fmt::Display for List {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            List::EmptyList => write!(f, "()"),
+            List::Head { head, tail } => match **tail {
+                List::EmptyList => write!(f, "({})", head),
+                List::Head { .. } => write!(f, "({} ...)", head),
+            },
+        }
+    }
+}
+
+impl std::fmt::Display for Fexpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.arg_list {
+            ArgList::Args(list) => {
+                write!(f, "(fexpr! (")?;
+                if !list.is_empty() {
+                    write!(f, "{}", list[0])?;
+                    for atom in &list[1..] {
+                        write!(f, " {}", atom)?;
+                    }
+                }
+                write!(f, ") {})", self.body)
+            }
+            ArgList::Vargs(atom) => write!(f, "(fexpr! {} {})", atom, self.body),
+        }
+    }
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Atom(atom) => write!(f, "{}", atom),
+            Self::List(list) => write!(f, "{}", list),
+            Self::Fexpr(fexpr) => write!(f, "{}", fexpr),
         }
     }
 }

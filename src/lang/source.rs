@@ -24,3 +24,9 @@ pub enum Value {
     Atom(Atom),
     List(List),
 }
+
+impl std::fmt::Display for SourceInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}:{}", self.name, self.lineno, self.charno)
+    }
+}
