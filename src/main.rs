@@ -12,7 +12,7 @@ fn main() {
         return;
     }
 
-    for ref v in p.unwrap() {
+    for v in &p.unwrap() {
         lang::print(&mut std::io::stdout(), &v.into()).unwrap();
         std::io::stdout().write_all(b"\n").unwrap();
     }
