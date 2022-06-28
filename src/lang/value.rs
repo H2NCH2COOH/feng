@@ -1,7 +1,6 @@
 use super::source;
 use std::boxed::Box;
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -11,21 +10,28 @@ pub struct Atom {
 }
 
 #[derive(Debug)]
-pub struct Scope {
-    pub parent: Option<Rc<Scope>>,
-    pub table: HashMap<Atom, Value>,
-}
-
-#[derive(Debug)]
 pub enum List {
     EmptyList {},
     Head { head: Value, tail: Rc<List> },
 }
 
 #[derive(Clone, Debug)]
+pub enum ArgList {
+    Vargs(Atom),
+    Args(Box<[Atom]>),
+}
+
+#[derive(Clone, Debug)]
+pub struct Fexpr {
+    arg_list: ArgList,
+    body: Rc<List>,
+}
+
+#[derive(Clone, Debug)]
 pub enum Value {
     Atom(Atom),
     List(Rc<List>),
+    Fexpr(Fexpr),
 }
 
 impl Ord for Atom {
@@ -55,7 +61,7 @@ impl Hash for Atom {
 }
 
 impl Atom {
-    fn new(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             name: Box::from(name),
         }
@@ -63,7 +69,7 @@ impl Atom {
 }
 
 impl List {
-    fn empty() -> Rc<Self> {
+    pub fn empty() -> Rc<Self> {
         Rc::new(List::EmptyList {})
     }
 }

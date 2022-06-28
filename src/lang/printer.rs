@@ -1,11 +1,12 @@
 use super::error::Error;
-use super::value::{Atom, List, Value};
+use super::value::{Atom, Fexpr, List, Value};
 use std::io::Write;
 
 pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
     match val {
         Value::Atom(atom) => print_atom(out, atom),
         Value::List(list) => print_list(out, list),
+        Value::Fexpr(fexpr) => print_fexpr(out, fexpr),
     }
 }
 
@@ -35,4 +36,8 @@ fn print_list<W: Write>(out: &mut W, list: &List) -> Result<(), Error> {
     write!(out, ")")?;
 
     Ok(())
+}
+
+fn print_fexpr<W: Write>(out: &mut W, fexpr: &Fexpr) -> Result<(), Error> {
+    todo!()
 }

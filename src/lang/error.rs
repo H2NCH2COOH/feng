@@ -8,6 +8,11 @@ pub enum Error {
         source_info: SourceInfo,
         msg: String,
     },
+    BadCtxLevel {
+        source_info: SourceInfo,
+        level_required: u64,
+        level_max: u64,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -19,6 +24,15 @@ impl std::fmt::Display for Error {
                 f,
                 "Syntax error on {} at {}:{}:\n{}",
                 source_info.name, source_info.lineno, source_info.charno, msg
+            ),
+            Error::BadCtxLevel {
+                source_info,
+                level_required,
+                level_max,
+            } => write!(
+                f,
+                "Bad context level required: {}, max {} on {}:{}:{}",
+                level_required, level_max, source_info.name, source_info.lineno, source_info.charno
             ),
         }
     }

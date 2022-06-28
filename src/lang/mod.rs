@@ -1,6 +1,7 @@
 use std::vec::Vec;
 
 mod chars;
+mod core;
 mod error;
 mod parser;
 mod printer;
