@@ -56,6 +56,22 @@ pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
     todo!()
 }
 
-fn eval(ctx: &Context, val: &Value, source_info: &SourceInfo) -> Result<Value, Error> {
-    todo!()
+fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    match val {
+        Value::Atom(atom) => lookup(atom, ctx, source_info),
+        Value::List(list) => todo!(),
+        _ => Err(Error::CantEval {
+            source_info: source_info.clone(),
+            val: val.clone(),
+        }),
+    }
+}
+
+fn upeval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    match &mut ctx.parent {
+        Some(parent) => eval(val, parent, source_info),
+        None => Err(Error::NoUpCtx {
+            source_info: source_info.clone(),
+        }),
+    }
 }
