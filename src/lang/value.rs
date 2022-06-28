@@ -9,10 +9,16 @@ pub struct Atom {
     pub name: Box<str>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum List {
-    EmptyList,
-    Head { head: Value, tail: Rc<List> },
+    Empty,
+    Head(Rc<ListHead>),
+}
+
+#[derive(Debug)]
+pub struct ListHead {
+    pub val: Value,
+    pub tail: List,
 }
 
 #[derive(Clone, Debug)]
@@ -32,7 +38,7 @@ pub enum Value {
     SourceAtom(source::Atom),
     SourceList(source::List),
     Atom(Atom),
-    List(Rc<List>),
+    List(List),
     Fexpr(Fexpr),
 }
 
@@ -62,20 +68,6 @@ impl Hash for Atom {
     }
 }
 
-impl Atom {
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: Box::from(name),
-        }
-    }
-}
-
-impl List {
-    pub fn empty() -> Rc<Self> {
-        Rc::new(List::EmptyList)
-    }
-}
-
 impl From<&source::Atom> for Atom {
     fn from(src: &source::Atom) -> Self {
         Self {
@@ -102,10 +94,10 @@ impl std::fmt::Display for Atom {
 impl std::fmt::Display for List {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            List::EmptyList => write!(f, "()"),
-            List::Head { head, tail } => match **tail {
-                List::EmptyList => write!(f, "({})", head),
-                List::Head { .. } => write!(f, "({} ...)", head),
+            List::Empty => write!(f, "()"),
+            List::Head(head) => match head.tail {
+                List::Empty => write!(f, "({})", head.val),
+                List::Head(_) => write!(f, "({} ...)", head.val),
             },
         }
     }

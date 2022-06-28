@@ -25,14 +25,14 @@ fn print_list<W: Write>(out: &mut W, list: &List) -> Result<(), Error> {
     let mut ptr = list;
     loop {
         match ptr {
-            List::EmptyList => break,
-            List::Head { head, tail } => {
+            List::Empty => break,
+            List::Head(head) => {
                 if !first {
                     write!(out, " ")?;
                 }
                 first = false;
-                print(out, head)?;
-                ptr = tail;
+                print(out, &head.val)?;
+                ptr = &head.tail;
             }
         }
     }

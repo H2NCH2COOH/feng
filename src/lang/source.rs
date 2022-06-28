@@ -60,14 +60,14 @@ impl std::fmt::Display for Value {
     }
 }
 
-impl From<&List> for Rc<value::List> {
+impl From<&List> for value::List {
     fn from(src: &List) -> Self {
-        let mut head = value::List::empty();
+        let mut head = value::List::Empty;
         for v in src.list.iter().rev() {
-            head = Rc::new(value::List::Head {
-                head: v.into(),
+            head = value::List::Head(Rc::new(value::ListHead {
+                val: v.into(),
                 tail: head,
-            })
+            }))
         }
 
         head
