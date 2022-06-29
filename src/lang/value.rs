@@ -69,19 +69,33 @@ impl Hash for Atom {
 }
 
 impl From<&source::Atom> for Atom {
-    fn from(src: &source::Atom) -> Self {
+    fn from(that: &source::Atom) -> Self {
         Self {
-            name: src.name.clone(),
+            name: that.name.clone(),
         }
     }
 }
 
 impl From<&source::Value> for Value {
-    fn from(src: &source::Value) -> Self {
-        match src {
+    fn from(that: &source::Value) -> Self {
+        match that {
             source::Value::Atom(a) => Value::SourceAtom(a.clone()),
             source::Value::List(l) => Value::SourceList(l.clone()),
         }
+    }
+}
+
+impl From<&[source::Value]> for List {
+    fn from(that: &[source::Value]) -> Self {
+        let mut head = List::Empty;
+        for v in that.iter().rev() {
+            head = List::Head(Rc::new(ListHead {
+                val: v.into(),
+                tail: head,
+            }));
+        }
+
+        head
     }
 }
 
