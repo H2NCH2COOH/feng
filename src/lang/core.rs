@@ -9,6 +9,24 @@ struct Context<'a> {
     map: HashMap<Atom, Value>,
 }
 
+#[derive(Debug)]
+enum ListRef<'a> {
+    Value(&'a List),
+    Source(&'a source::List),
+}
+
+impl<'a> From<&'a List> for ListRef<'a> {
+    fn from(that: &'a List) -> Self {
+        Self::Value(that)
+    }
+}
+
+impl<'a> From<&'a source::List> for ListRef<'a> {
+    fn from(that: &'a source::List) -> Self {
+        Self::Source(that)
+    }
+}
+
 fn define(
     key: &Atom,
     val: &Value,
@@ -59,7 +77,8 @@ pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
 fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
     match val {
         Value::Atom(atom) => lookup(atom, ctx, source_info),
-        Value::List(list) => todo!(),
+        Value::List(list) => call(list.into(), ctx, source_info),
+        Value::SourceList(list) => call(list.into(), ctx, &list.source_info),
         _ => Err(Error::CantEval {
             source_info: source_info.clone(),
             val: val.clone(),
@@ -74,4 +93,8 @@ fn upeval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
             source_info: source_info.clone(),
         }),
     }
+}
+
+fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    todo!()
 }
