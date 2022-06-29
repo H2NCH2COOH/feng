@@ -15,6 +15,10 @@ pub enum Error {
         source_info: SourceInfo,
         val: super::value::Value,
     },
+    CantCall {
+        source_info: SourceInfo,
+        val: super::value::Value,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -28,6 +32,9 @@ impl std::fmt::Display for Error {
             Error::NoUpCtx { source_info } => write!(f, "Can't go upwards\n\tAt {}", source_info),
             Error::CantEval { source_info, val } => {
                 write!(f, "Can't eval value: {}\n\tAt {}", val, source_info)
+            }
+            Error::CantCall { source_info, val } => {
+                write!(f, "Can't call value: {}\n\tAt {}", val, source_info)
             }
         }
     }

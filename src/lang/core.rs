@@ -151,10 +151,27 @@ fn upeval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
 }
 
 fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    return Err(Error::CantEval {
+    let callable = car(&list).ok_or(Error::CantEval {
         source_info: source_info.clone(),
         val: list.into(),
-    });
+    })?;
 
+    let callable = match &callable {
+        Value::Atom(atom) => lookup(atom, ctx, source_info)?,
+        Value::SourceAtom(atom) => lookup(&atom.into(), ctx, source_info)?,
+        _ => callable,
+    };
+
+    match &callable {
+        Value::Fexpr(fexpr) => call_fexpr(fexpr, ctx, source_info),
+        // TODO: Call functions
+        _ => Err(Error::CantCall {
+            source_info: source_info.clone(),
+            val: callable.clone(),
+        }),
+    }
+}
+
+fn call_fexpr(fexpr: &Fexpr, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
     todo!()
 }
