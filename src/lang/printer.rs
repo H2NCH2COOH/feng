@@ -1,6 +1,6 @@
 use super::error::Error;
 use super::source;
-use super::value::{ArgList, Atom, Fexpr, List, Value};
+use super::value::{ArgList, Atom, Fexpr, Function, List, Value};
 use std::io::Write;
 
 pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
@@ -10,6 +10,7 @@ pub fn print<W: Write>(out: &mut W, val: &Value) -> Result<(), Error> {
         Value::SourceAtom(source_atom) => print_source_atom(out, source_atom),
         Value::SourceList(source_list) => print_source_list(out, source_list),
         Value::Fexpr(fexpr) => print_fexpr(out, fexpr),
+        Value::Function(func) => print_function(out, func),
     }
 }
 
@@ -85,4 +86,8 @@ fn print_fexpr<W: Write>(out: &mut W, fexpr: &Fexpr) -> Result<(), Error> {
     print_list(out, &fexpr.body);
     write!(out, ")")?;
     Ok(())
+}
+
+fn print_function<W: Write>(out: &mut W, func: &Function) -> Result<(), Error> {
+    todo!()
 }

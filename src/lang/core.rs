@@ -1,7 +1,7 @@
 use super::error::Error;
 use super::source;
 use super::source::SourceInfo;
-use super::value::{Atom, Fexpr, List, ListHead, Value};
+use super::value::{Atom, Fexpr, Function, List, ListHead, Value};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -164,7 +164,7 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
 
     match &callable {
         Value::Fexpr(fexpr) => call_fexpr(fexpr, ctx, source_info),
-        // TODO: Call functions
+        Value::Function(func) => call_function(func, ctx, source_info),
         _ => Err(Error::CantCall {
             source_info: source_info.clone(),
             val: callable.clone(),
@@ -173,5 +173,13 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
 }
 
 fn call_fexpr(fexpr: &Fexpr, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    todo!()
+}
+
+fn call_function(
+    func: &Function,
+    ctx: &mut Context,
+    source_info: &SourceInfo,
+) -> Result<Value, Error> {
     todo!()
 }

@@ -34,12 +34,18 @@ pub struct Fexpr {
 }
 
 #[derive(Clone, Debug)]
+pub enum Function {
+    // TODO
+}
+
+#[derive(Clone, Debug)]
 pub enum Value {
     SourceAtom(source::Atom),
     SourceList(source::List),
     Atom(Atom),
     List(List),
     Fexpr(Fexpr),
+    Function(Function),
 }
 
 impl Ord for Atom {
@@ -135,6 +141,12 @@ impl std::fmt::Display for Fexpr {
     }
 }
 
+impl std::fmt::Display for Function {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -143,6 +155,7 @@ impl std::fmt::Display for Value {
             Self::SourceAtom(source_atom) => write!(f, "{}", source_atom),
             Self::SourceList(source_list) => write!(f, "{}", source_list),
             Self::Fexpr(fexpr) => write!(f, "{}", fexpr),
+            Self::Function(func) => write!(f, "{}", func),
         }
     }
 }
