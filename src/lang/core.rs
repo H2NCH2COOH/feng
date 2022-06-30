@@ -28,9 +28,9 @@ impl<'a> From<&'a source::List> for ListRef<'a> {
     }
 }
 
-impl<'a> From<ListRef<'a>> for Value {
-    fn from(that: ListRef<'a>) -> Self {
-        match that {
+impl<'a> From<&ListRef<'a>> for Value {
+    fn from(that: &ListRef<'a>) -> Self {
+        match *that {
             ListRef::Value(v) => Value::List(v.clone()),
             ListRef::Source(s) => Value::SourceList(s.clone()),
         }
@@ -153,7 +153,7 @@ fn upeval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
 fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
     let callable = car(&list).ok_or(Error::CantEval {
         source_info: source_info.clone(),
-        val: list.into(),
+        val: (&list).into(),
     })?;
 
     let callable = match &callable {
@@ -162,9 +162,11 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
         _ => callable,
     };
 
+    let args = cdr(&list).unwrap_or(Value::List(List::Empty));
+
     match &callable {
-        Value::Fexpr(fexpr) => call_fexpr(fexpr, ctx, source_info),
-        Value::Function(func) => call_function(func, ctx, source_info),
+        Value::Fexpr(fexpr) => call_fexpr(fexpr, &args, ctx, source_info),
+        Value::Function(func) => call_function(func, &args, ctx, source_info),
         _ => Err(Error::CantCall {
             source_info: source_info.clone(),
             val: callable.clone(),
@@ -172,12 +174,18 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
     }
 }
 
-fn call_fexpr(fexpr: &Fexpr, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
+fn call_fexpr(
+    fexpr: &Fexpr,
+    args: &Value,
+    ctx: &mut Context,
+    source_info: &SourceInfo,
+) -> Result<Value, Error> {
     todo!()
 }
 
 fn call_function(
     func: &Function,
+    args: &Value,
     ctx: &mut Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {

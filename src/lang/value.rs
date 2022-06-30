@@ -1,12 +1,11 @@
 use super::source;
-use std::boxed::Box;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub struct Atom {
-    pub name: Box<str>,
+    pub name: Rc<str>,
 }
 
 #[derive(Clone, Debug)]
@@ -24,7 +23,7 @@ pub struct ListHead {
 #[derive(Clone, Debug)]
 pub enum ArgList {
     Vargs(Atom),
-    Args(Box<[Atom]>),
+    Args(Rc<[Atom]>),
 }
 
 #[derive(Clone, Debug)]

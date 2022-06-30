@@ -10,13 +10,13 @@ pub struct SourceInfo {
 
 #[derive(Clone, Debug)]
 pub struct Atom {
-    pub name: Box<str>, // Might use Rc?
+    pub name: Rc<str>, // Might use Rc?
     pub source_info: SourceInfo,
 }
 
 #[derive(Clone, Debug)]
 pub struct List {
-    pub list: Box<[Value]>, // Might use Rc?
+    pub list: Rc<[Value]>, // Might use Rc?
     pub source_info: SourceInfo,
 }
 
