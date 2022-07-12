@@ -53,18 +53,16 @@ fn car(list: &ListRef) -> Option<Value> {
     }
 }
 
-fn cdr(list: &ListRef) -> Option<Value> {
+fn cdr(list: &ListRef) -> Option<List> {
     match *list {
         ListRef::Value(v) => match v {
             List::Empty => None,
-            List::Head(head) => match head.tail {
-                List::Empty => None,
-                List::Head(_) => Some(Value::List(List::Head(head.clone()))),
-            },
+            List::Head(head) => Some(head.tail.clone()),
         },
         ListRef::Source(s) => match s.list.len() {
-            0..=1 => None,
-            _ => Some(Value::List((&s.list[1..]).into())),
+            0 => None,
+            1 => Some(List::Empty),
+            _ => Some((&s.list[1..]).into()),
         },
     }
 }
@@ -162,7 +160,7 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
         _ => callable,
     };
 
-    let args = cdr(&list).unwrap_or(Value::List(List::Empty));
+    let args = cdr(&list).unwrap_or(List::Empty);
 
     match &callable {
         Value::Fexpr(fexpr) => call_fexpr(fexpr, &args, ctx, source_info),
@@ -176,7 +174,7 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
 
 fn call_fexpr(
     fexpr: &Fexpr,
-    args: &Value,
+    args: &List,
     ctx: &mut Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
@@ -185,7 +183,7 @@ fn call_fexpr(
 
 fn call_function(
     func: &Function,
-    args: &Value,
+    args: &List,
     ctx: &mut Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
