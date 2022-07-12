@@ -1,16 +1,15 @@
 use super::error::Error;
 use super::source;
 use super::source::SourceInfo;
-use super::value::{Atom, Fexpr, Function, List, ListHead, Value};
+use super::value::{ArgList, Atom, Fexpr, Function, List, ListHead, Value};
 use std::collections::HashMap;
 use std::rc::Rc;
 
 struct Context<'a> {
-    parent: Option<&'a mut Self>,
+    parent: Option<&'a Self>,
     map: HashMap<Atom, Value>,
 }
 
-#[derive(Debug)]
 enum ListRef<'a> {
     Value(&'a List),
     Source(&'a source::List),
@@ -34,6 +33,61 @@ impl<'a> From<&ListRef<'a>> for Value {
             ListRef::Value(v) => Value::List(v.clone()),
             ListRef::Source(s) => Value::SourceList(s.clone()),
         }
+    }
+}
+
+pub struct ListIter<'a> {
+    next: &'a List,
+}
+
+impl<'a> Iterator for ListIter<'a> {
+    type Item = Value;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.next {
+            List::Empty => None,
+            List::Head(head) => {
+                self.next = &head.tail;
+                Some(head.val.clone())
+            }
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a List {
+    type Item = Value;
+    type IntoIter = ListIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ListIter { next: self }
+    }
+}
+
+pub struct SourceListIter<'a> {
+    base: &'a source::List,
+    idx: usize,
+}
+
+impl<'a> Iterator for SourceListIter<'a> {
+    type Item = Value;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.base.list.len() {
+            let ret = (&self.base.list[self.idx]).into();
+            self.idx += 1;
+            Some(ret)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a source::List {
+    type Item = Value;
+    type IntoIter = SourceListIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        SourceListIter { base: self, idx: 0 }
     }
 }
 
@@ -80,28 +134,24 @@ fn cons(val: &Value, list: &ListRef) -> Value {
     })))
 }
 
-fn define(
-    key: &Atom,
-    val: &Value,
-    ctx: &mut Context,
-    source_info: &SourceInfo,
-) -> Result<(), Error> {
-    ctx.map.insert(key.clone(), val.clone());
-    Ok(())
+fn list_len(list: &ListRef) -> usize {
+    match list {
+        ListRef::Value(v) => match v {
+            List::Empty => 0,
+            List::Head(head) => list_len(&ListRef::Value(&head.tail)) + 1,
+        },
+        ListRef::Source(s) => s.list.len(),
+    }
 }
 
-fn updefine(
+fn define(
     key: &Atom,
-    val: &Value,
+    val: Value,
     ctx: &mut Context,
-    source_info: &SourceInfo,
+    _source_info: &SourceInfo,
 ) -> Result<(), Error> {
-    match &mut ctx.parent {
-        Some(parent) => define(key, val, parent, source_info),
-        None => Err(Error::NoUpCtx {
-            source_info: source_info.clone(),
-        }),
-    }
+    ctx.map.insert(key.clone(), val);
+    Ok(())
 }
 
 fn lookup(key: &Atom, ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
@@ -111,15 +161,6 @@ fn lookup(key: &Atom, ctx: &Context, source_info: &SourceInfo) -> Result<Value, 
             Some(parent) => lookup(key, parent, source_info),
             None => Ok(Value::Atom(key.clone())),
         },
-    }
-}
-
-fn uplookup(key: &Atom, ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    match &ctx.parent {
-        Some(parent) => lookup(key, parent, source_info),
-        None => Err(Error::NoUpCtx {
-            source_info: source_info.clone(),
-        }),
     }
 }
 
@@ -140,8 +181,8 @@ fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Valu
 }
 
 fn upeval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    match &mut ctx.parent {
-        Some(parent) => eval(val, parent, source_info),
+    match ctx.parent {
+        Some(parent) => todo!(),
         None => Err(Error::NoUpCtx {
             source_info: source_info.clone(),
         }),
@@ -172,19 +213,51 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
     }
 }
 
-fn call_fexpr(
-    fexpr: &Fexpr,
+fn apply_args(
+    arg_list: &ArgList,
     args: &List,
     ctx: &mut Context,
     source_info: &SourceInfo,
+) -> Result<(), Error> {
+    match arg_list {
+        ArgList::Vargs(atom) => define(atom, Value::List(args.clone()), ctx, source_info),
+        ArgList::Args(list) => {
+            let expected = list.len();
+            let found = list_len(&ListRef::Value(args));
+            if expected != found {
+                Err(Error::BadArgsNum {
+                    source_info: source_info.clone(),
+                    expected,
+                    found,
+                })
+            } else {
+                for (atom, val) in std::iter::zip(list.iter(), args.into_iter()) {
+                    define(atom, val, ctx, source_info)?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+fn call_fexpr(
+    fexpr: &Fexpr,
+    args: &List,
+    parent_ctx: &mut Context,
+    source_info: &SourceInfo,
 ) -> Result<Value, Error> {
-    todo!()
+    let mut ctx = Context {
+        parent: Some(parent_ctx),
+        map: HashMap::new(),
+    };
+    apply_args(&fexpr.arg_list, args, &mut ctx, source_info)?;
+    eval(&Value::List(fexpr.body.clone()), &mut ctx, source_info)
 }
 
 fn call_function(
     func: &Function,
     args: &List,
-    ctx: &mut Context,
+    parent_ctx: &mut Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
     todo!()

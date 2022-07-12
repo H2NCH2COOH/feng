@@ -29,7 +29,7 @@ pub enum ArgList {
 #[derive(Clone, Debug)]
 pub struct Fexpr {
     pub arg_list: ArgList,
-    pub body: Rc<List>,
+    pub body: List,
 }
 
 #[derive(Clone, Debug)]
