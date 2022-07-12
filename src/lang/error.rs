@@ -1,6 +1,5 @@
 use super::source::SourceInfo;
 
-#[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
     Utf8([u8; 4]),
@@ -19,6 +18,11 @@ pub enum Error {
         source_info: SourceInfo,
         val: super::value::Value,
     },
+    BadArgsNum {
+        source_info: SourceInfo,
+        expected: usize,
+        found: usize,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -36,7 +40,24 @@ impl std::fmt::Display for Error {
             Error::CantCall { source_info, val } => {
                 write!(f, "Can't call value: {}\n\tAt {}", val, source_info)
             }
+            Error::BadArgsNum {
+                source_info,
+                expected,
+                found,
+            } => {
+                write!(
+                    f,
+                    "Bad number of arguments, expected {}, found {}\n\tAt {}",
+                    expected, found, source_info
+                )
+            }
         }
+    }
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
