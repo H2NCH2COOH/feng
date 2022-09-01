@@ -176,11 +176,10 @@ fn create_root_context() -> Context<'static> {
 
 pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
     let mut ctx = create_root_context();
-    let mut rst = Value::List(List::Empty);
-    for val in src {
-        rst = eval(&val.into(), &mut ctx, val.source_info())?;
-    }
-    Ok(rst)
+
+    src.iter().try_fold(Value::List(List::Empty), |_, val| {
+        eval(&val.into(), &mut ctx, val.source_info())
+    })
 }
 
 fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
