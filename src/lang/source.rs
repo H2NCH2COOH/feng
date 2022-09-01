@@ -26,6 +26,15 @@ pub enum Value {
     List(List),
 }
 
+impl Value {
+    pub fn source_info(&self) -> &SourceInfo {
+        match self {
+            Value::Atom(atom) => &atom.source_info,
+            Value::List(list) => &list.source_info,
+        }
+    }
+}
+
 impl std::fmt::Display for SourceInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}:{}", self.name, self.lineno, self.charno)

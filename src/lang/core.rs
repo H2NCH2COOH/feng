@@ -164,8 +164,23 @@ fn lookup(key: &Atom, ctx: &Context, source_info: &SourceInfo) -> Result<Value, 
     }
 }
 
+fn create_root_context() -> Context<'static> {
+    let mut ctx = Context {
+        parent: None,
+        map: HashMap::new(),
+    };
+
+    //TODO: Add functions to ctx
+    ctx
+}
+
 pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
-    todo!()
+    let mut ctx = create_root_context();
+    let mut rst = Value::List(List::Empty);
+    for val in src {
+        rst = eval(&val.into(), &mut ctx, val.source_info())?;
+    }
+    Ok(rst)
 }
 
 fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
