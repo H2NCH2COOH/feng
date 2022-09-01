@@ -196,7 +196,13 @@ fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Valu
 
 fn upeval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
     match ctx.parent {
-        Some(parent) => todo!(),
+        Some(parent) => {
+            let mut ctx = Context {
+                parent: Some(parent),
+                map: HashMap::new(),
+            };
+            eval(val, &mut ctx, source_info)
+        }
         None => Err(Error::NoUpCtx {
             source_info: source_info.clone(),
         }),
