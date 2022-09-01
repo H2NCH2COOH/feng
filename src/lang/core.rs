@@ -10,6 +10,7 @@ struct Context<'a> {
     map: HashMap<Atom, Value>,
 }
 
+#[derive(Copy, Clone)]
 enum ListRef<'a> {
     Value(&'a List),
     Source(&'a source::List),
@@ -27,9 +28,9 @@ impl<'a> From<&'a source::List> for ListRef<'a> {
     }
 }
 
-impl<'a> From<&ListRef<'a>> for Value {
-    fn from(that: &ListRef<'a>) -> Self {
-        match *that {
+impl<'a> From<ListRef<'a>> for Value {
+    fn from(that: ListRef<'a>) -> Self {
+        match that {
             ListRef::Value(v) => Value::List(v.clone()),
             ListRef::Source(s) => Value::SourceList(s.clone()),
         }
@@ -91,8 +92,8 @@ impl<'a> IntoIterator for &'a source::List {
     }
 }
 
-fn car(list: &ListRef) -> Option<Value> {
-    match *list {
+fn car(list: ListRef) -> Option<Value> {
+    match list {
         ListRef::Value(v) => match v {
             List::Empty => None,
             List::Head(head) => Some(head.val.clone()),
@@ -107,8 +108,8 @@ fn car(list: &ListRef) -> Option<Value> {
     }
 }
 
-fn cdr(list: &ListRef) -> Option<List> {
-    match *list {
+fn cdr(list: ListRef) -> Option<List> {
+    match list {
         ListRef::Value(v) => match v {
             List::Empty => None,
             List::Head(head) => Some(head.tail.clone()),
@@ -121,8 +122,8 @@ fn cdr(list: &ListRef) -> Option<List> {
     }
 }
 
-fn cons(val: &Value, list: &ListRef) -> Value {
-    Value::List(List::Head(Rc::new(match *list {
+fn cons(val: &Value, list: ListRef) -> List {
+    List::Head(Rc::new(match list {
         ListRef::Value(v) => ListHead {
             val: val.clone(),
             tail: v.clone(),
@@ -131,14 +132,14 @@ fn cons(val: &Value, list: &ListRef) -> Value {
             val: val.clone(),
             tail: (&s.list[..]).into(),
         },
-    })))
+    }))
 }
 
-fn list_len(list: &ListRef) -> usize {
+fn list_len(list: ListRef) -> usize {
     match list {
         ListRef::Value(v) => match v {
             List::Empty => 0,
-            List::Head(head) => list_len(&ListRef::Value(&head.tail)) + 1,
+            List::Head(head) => list_len(ListRef::Value(&head.tail)) + 1,
         },
         ListRef::Source(s) => s.list.len(),
     }
@@ -170,14 +171,15 @@ fn create_root_context() -> Context<'static> {
         map: HashMap::new(),
     };
 
-    //TODO: Add functions to ctx
+    //TODO
+
     ctx
 }
 
 pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
     let mut ctx = create_root_context();
 
-    src.iter().try_fold(Value::List(List::Empty), |_, val| {
+    src.iter().try_fold(List::Empty.into(), |_, val| {
         eval(&val.into(), &mut ctx, val.source_info())
     })
 }
@@ -210,9 +212,9 @@ fn upeval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
 }
 
 fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    let callable = car(&list).ok_or(Error::CantEval {
+    let callable = car(list).ok_or(Error::CantEval {
         source_info: source_info.clone(),
-        val: (&list).into(),
+        val: list.into(),
     })?;
 
     let callable = match &callable {
@@ -221,7 +223,7 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
         _ => callable,
     };
 
-    let args = cdr(&list).unwrap_or(List::Empty);
+    let args = cdr(list).unwrap_or(List::Empty);
 
     match &callable {
         Value::Fexpr(fexpr) => call_fexpr(fexpr, &args, ctx, source_info),
@@ -243,7 +245,7 @@ fn apply_args(
         ArgList::Vargs(atom) => define(atom, Value::List(args.clone()), ctx, source_info),
         ArgList::Args(list) => {
             let expected = list.len();
-            let found = list_len(&ListRef::Value(args));
+            let found = list_len(ListRef::Value(args));
             if expected != found {
                 Err(Error::BadArgsNum {
                     source_info: source_info.clone(),
@@ -258,6 +260,16 @@ fn apply_args(
             }
         }
     }
+}
+
+fn eval_args(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<List, Error> {
+    Ok(match args {
+        List::Empty => List::Empty,
+        List::Head(head) => cons(
+            &eval(&head.val, ctx, source_info)?,
+            (&eval_args(&head.tail, ctx, source_info)?).into(),
+        ),
+    })
 }
 
 fn call_fexpr(
