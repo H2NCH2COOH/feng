@@ -145,14 +145,8 @@ fn list_len(list: ListRef) -> usize {
     }
 }
 
-fn define(
-    key: &Atom,
-    val: Value,
-    ctx: &mut Context,
-    _source_info: &SourceInfo,
-) -> Result<(), Error> {
+fn define(key: &Atom, val: Value, ctx: &mut Context) {
     ctx.map.insert(key.clone(), val);
-    Ok(())
 }
 
 fn lookup(key: &Atom, ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
@@ -171,7 +165,9 @@ fn create_root_context() -> Context<'static> {
         map: HashMap::new(),
     };
 
-    //TODO
+    for (name, func) in super::value::NAMED_FUNCS {
+        define(&Atom::new(name), Value::Function(*func), &mut ctx);
+    }
 
     ctx
 }
@@ -242,7 +238,7 @@ fn apply_args(
     source_info: &SourceInfo,
 ) -> Result<(), Error> {
     match arg_list {
-        ArgList::Vargs(atom) => define(atom, Value::List(args.clone()), ctx, source_info),
+        ArgList::Vargs(atom) => Ok(define(atom, Value::List(args.clone()), ctx)),
         ArgList::Args(list) => {
             let expected = list.len();
             let found = list_len(ListRef::Value(args));
@@ -254,7 +250,7 @@ fn apply_args(
                 })
             } else {
                 for (atom, val) in std::iter::zip(list.iter(), args.into_iter()) {
-                    define(atom, val, ctx, source_info)?;
+                    define(atom, val, ctx);
                 }
                 Ok(())
             }

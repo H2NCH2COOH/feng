@@ -32,10 +32,53 @@ pub struct Fexpr {
     pub body: List,
 }
 
-#[derive(Clone, Debug)]
-pub enum Function {
-    // TODO
+macro_rules! define_funcs {
+    ( $( ( $name:expr, $enum_id:ident ) ),* ) => {
+        #[derive(Clone, Copy, Debug)]
+        pub enum Function {
+            $( $enum_id, )*
+        }
+
+        pub const NAMED_FUNCS: &'static [(&'static str, Function)] = &[
+            $( ($name, Function::$enum_id), )*
+        ];
+
+        impl std::fmt::Display for Function {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $( Function::$enum_id => write!(f, $name), )*
+                }
+            }
+        }
+    }
 }
+
+define_funcs!(
+    ("eval", Eval),
+    ("eval!", EvalF),
+    ("upeval", UpEval),
+    ("upeval!", UpEvalF),
+    ("define", Define),
+    ("define!", DefineF),
+    ("atom-concat", AtomConcat),
+    ("atom-concat!", AtomConcatF),
+    ("eq", Equal),
+    ("eq!", EqualF),
+    ("atom?", IsAtom),
+    ("atom?!", IsAtomF),
+    ("list?", IsList),
+    ("list?!", IsListF),
+    ("begin!", BeginF),
+    ("quote!", QuoteF),
+    ("list", List),
+    ("list!", ListF),
+    ("car", Car),
+    ("car!", CarF),
+    ("cdr", Cdr),
+    ("cdr!", CdrF),
+    ("cons", Cons),
+    ("cons!", ConsF)
+);
 
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -45,6 +88,14 @@ pub enum Value {
     List(List),
     Fexpr(Fexpr),
     Function(Function),
+}
+
+impl Atom {
+    pub fn new(name: &str) -> Self {
+        Atom {
+            name: Rc::from(name),
+        }
+    }
 }
 
 impl Ord for Atom {
@@ -70,6 +121,20 @@ impl Eq for Atom {}
 impl Hash for Atom {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name.hash(state);
+    }
+}
+
+impl From<Atom> for Value {
+    fn from(that: Atom) -> Self {
+        Value::Atom(that)
+    }
+}
+
+impl List {}
+
+impl From<List> for Value {
+    fn from(that: List) -> Self {
+        Value::List(that)
     }
 }
 
@@ -137,12 +202,6 @@ impl std::fmt::Display for Fexpr {
             }
             ArgList::Vargs(atom) => write!(f, "(fexpr! {} {})", atom, self.body),
         }
-    }
-}
-
-impl std::fmt::Display for Function {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
     }
 }
 
