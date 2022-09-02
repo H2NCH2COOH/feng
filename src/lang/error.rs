@@ -23,6 +23,10 @@ pub enum Error {
         expected: usize,
         found: usize,
     },
+    BadFuncArgs {
+        source_info: SourceInfo,
+        msg: String,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -50,6 +54,9 @@ impl std::fmt::Display for Error {
                     "Bad number of arguments, expected {}, found {}\n\tAt {}",
                     expected, found, source_info
                 )
+            }
+            Error::BadFuncArgs { source_info, msg } => {
+                write!(f, "Bad arguments: {}\n\tAt {}", msg, source_info)
             }
         }
     }

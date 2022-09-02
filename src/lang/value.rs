@@ -92,6 +92,12 @@ pub enum Value {
     Function(Function),
 }
 
+pub const EMPTY_LIST: Value = Value::List(List::Empty);
+pub const FALSE: Value = EMPTY_LIST;
+thread_local! {
+    pub static TRUE: Value = Value::Atom(Atom::new("true"));
+}
+
 impl Atom {
     pub fn new(name: &str) -> Self {
         Atom {
@@ -133,6 +139,21 @@ impl From<Atom> for Value {
 }
 
 impl List {}
+
+impl From<&Value> for bool {
+    fn from(that: &Value) -> Self {
+        match that {
+            Value::List(List::Empty) => false,
+            _ => true,
+        }
+    }
+}
+
+impl From<Value> for bool {
+    fn from(that: Value) -> Self {
+        (&that).into()
+    }
+}
 
 impl From<List> for Value {
     fn from(that: List) -> Self {

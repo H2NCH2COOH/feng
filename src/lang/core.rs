@@ -1,8 +1,9 @@
 use super::error::Error;
 use super::source;
 use super::source::SourceInfo;
-use super::value::{ArgList, Atom, Fexpr, Function, List, ListHead, Value};
+use super::value::{ArgList, Atom, Fexpr, Function, List, ListHead, Value, EMPTY_LIST};
 use std::collections::HashMap;
+use std::io::Write;
 use std::rc::Rc;
 
 struct Context<'a> {
@@ -145,6 +146,13 @@ fn list_len(list: ListRef) -> usize {
     }
 }
 
+fn atom_eq(left: &Value, right: &Value) -> bool {
+    match (left, right) {
+        (Value::Atom(left), Value::Atom(right)) => left == right,
+        _ => false,
+    }
+}
+
 fn define(key: &Atom, val: Value, ctx: &mut Context) {
     ctx.map.insert(key.clone(), val);
 }
@@ -175,7 +183,7 @@ fn create_root_context() -> Context<'static> {
 pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
     let mut ctx = create_root_context();
 
-    src.iter().try_fold(List::Empty.into(), |_, val| {
+    src.iter().try_fold(EMPTY_LIST, |_, val| {
         eval(&val.into(), &mut ctx, val.source_info())
     })
 }
@@ -238,7 +246,10 @@ fn apply_args(
     source_info: &SourceInfo,
 ) -> Result<(), Error> {
     match arg_list {
-        ArgList::Vargs(atom) => Ok(define(atom, Value::List(args.clone()), ctx)),
+        ArgList::Vargs(atom) => {
+            define(atom, Value::List(args.clone()), ctx);
+            Ok(())
+        }
         ArgList::Args(list) => {
             let expected = list.len();
             let found = list_len(ListRef::Value(args));
@@ -271,7 +282,7 @@ fn eval_args(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result
 fn call_fexpr(
     fexpr: &Fexpr,
     args: &List,
-    parent_ctx: &mut Context,
+    parent_ctx: &Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
     let mut ctx = Context {
@@ -285,8 +296,50 @@ fn call_fexpr(
 fn call_function(
     func: &Function,
     args: &List,
-    parent_ctx: &mut Context,
+    parent_ctx: &Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
     todo!()
+}
+
+fn func_puts(
+    args: &List,
+    _parent_ctx: &Context,
+    _source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    for v in args {
+        super::print(&mut std::io::stdout(), &v)?;
+    }
+    std::io::stdout().write_all(b"\n")?;
+
+    Ok(EMPTY_LIST)
+}
+
+fn func_cond(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let mut ctx = Context {
+        parent: Some(parent_ctx),
+        map: HashMap::new(),
+    };
+
+    let mut iter = args.into_iter();
+    loop {
+        let test = match iter.next() {
+            None => break Ok(EMPTY_LIST),
+            Some(v) => v,
+        };
+        let val = match iter.next() {
+            None => {
+                break Err(Error::BadFuncArgs {
+                    source_info: source_info.clone(),
+                    msg: "cond: must have an even number of arguments".to_string(),
+                })
+            }
+            Some(v) => v,
+        };
+
+        let test = eval(&test, &mut ctx, source_info)?;
+        if test.into() {
+            break eval(&val, &mut ctx, source_info);
+        }
+    }
 }
