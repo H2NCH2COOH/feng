@@ -54,8 +54,8 @@ macro_rules! define_funcs {
 }
 
 define_funcs!(
-    ("puts", Print),
-    ("puts!", PrintF),
+    ("puts", Puts),
+    ("puts!", PutsF),
     ("cond", Cond),
     ("eval", Eval),
     ("eval!", EvalF),
@@ -65,8 +65,8 @@ define_funcs!(
     ("define!", DefineF),
     ("atom-concat", AtomConcat),
     ("atom-concat!", AtomConcatF),
-    ("atom-eq?", AtomEqual),
-    ("atom-eq?!", AtomEqualF),
+    ("atom-eq?", AtomEq),
+    ("atom-eq?!", AtomEqF),
     ("atom?", IsAtom),
     ("atom?!", IsAtomF),
     ("list?", IsList),

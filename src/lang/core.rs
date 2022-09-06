@@ -248,10 +248,39 @@ fn call_fexpr(
 fn call_function(
     func: &Function,
     args: &List,
-    parent_ctx: &Context,
+    ctx: &mut Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
-    todo!()
+    match func {
+        Function::Puts => func_puts(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::PutsF => func_puts(args, ctx, source_info),
+        Function::Cond => func_cond(args, ctx, source_info),
+        Function::Eval => func_eval(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::EvalF => func_eval(args, ctx, source_info),
+        Function::UpEval => func_upeval(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::UpEvalF => func_upeval(args, ctx, source_info),
+        Function::Define => func_define(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::DefineF => func_define(args, ctx, source_info),
+        Function::AtomConcat => {
+            func_atom_concat(&eval_args(args, ctx, source_info)?, ctx, source_info)
+        }
+        Function::AtomConcatF => func_atom_concat(args, ctx, source_info),
+        Function::AtomEq => func_atom_eq(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::AtomEqF => func_atom_eq(args, ctx, source_info),
+        Function::IsAtom => func_is_atom(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::IsAtomF => func_is_atom(args, ctx, source_info),
+        Function::IsList => func_is_list(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::IsListF => func_is_list(args, ctx, source_info),
+        Function::BeginF => func_begin(args, ctx, source_info),
+        Function::QuoteF => func_quote(args, ctx, source_info),
+        Function::List => func_list(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::Car => func_car(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::CarF => func_car(args, ctx, source_info),
+        Function::Cdr => func_cdr(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::CdrF => func_cdr(args, ctx, source_info),
+        Function::Cons => func_cons(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::ConsF => func_cons(args, ctx, source_info),
+    }
 }
 
 fn func_puts(
