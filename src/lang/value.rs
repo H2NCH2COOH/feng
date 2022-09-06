@@ -124,7 +124,7 @@ impl PartialOrd for Atom {
 
 impl PartialEq for Atom {
     fn eq(&self, other: &Self) -> bool {
-        self == other
+        self.name == other.name
     }
 }
 
