@@ -469,3 +469,18 @@ fn func_is_atom(
 
     Ok(TRUE())
 }
+
+fn func_is_list(
+    args: &List,
+    _parent_ctx: &Context,
+    _source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    for v in args.into_iter() {
+        match v {
+            Value::List(_) => (),
+            _ => return Ok(FALSE),
+        }
+    }
+
+    Ok(TRUE())
+}
