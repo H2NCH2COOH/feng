@@ -454,3 +454,18 @@ fn func_atom_eq(
 
     Ok(TRUE())
 }
+
+fn func_is_atom(
+    args: &List,
+    _parent_ctx: &Context,
+    _source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    for v in args.into_iter() {
+        match v {
+            Value::Atom(_) => (),
+            _ => return Ok(FALSE),
+        }
+    }
+
+    Ok(TRUE())
+}
