@@ -43,53 +43,25 @@ pub struct ListIter<'a> {
 }
 
 impl<'a> Iterator for ListIter<'a> {
-    type Item = Value;
+    type Item = &'a Value;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.next {
             List::Empty => None,
             List::Head(head) => {
                 self.next = &head.tail;
-                Some(head.val.clone())
+                Some(&head.val)
             }
         }
     }
 }
 
 impl<'a> IntoIterator for &'a List {
-    type Item = Value;
+    type Item = &'a Value;
     type IntoIter = ListIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         ListIter { next: self }
-    }
-}
-
-pub struct SourceListIter<'a> {
-    base: &'a source::List,
-    idx: usize,
-}
-
-impl<'a> Iterator for SourceListIter<'a> {
-    type Item = Value;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.idx < self.base.list.len() {
-            let ret = (&self.base.list[self.idx]).into();
-            self.idx += 1;
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a source::List {
-    type Item = Value;
-    type IntoIter = SourceListIter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        SourceListIter { base: self, idx: 0 }
     }
 }
 
@@ -246,7 +218,7 @@ fn apply_args(
                 })
             } else {
                 for (atom, val) in std::iter::zip(list.iter(), args.into_iter()) {
-                    define(atom, val, ctx);
+                    define(atom, val.clone(), ctx);
                 }
                 Ok(())
             }
@@ -414,7 +386,7 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
         });
     }
 
-    define(&key, val, ctx);
+    define(&key, val.clone(), ctx);
 
     Ok(EMPTY_LIST)
 }
@@ -426,13 +398,13 @@ fn func_atom_concat(args: &List, _parent_ctx: &Context, source_info: &SourceInfo
     for v in args.into_iter() {
         idx += 1;
         let atom = match v {
-            Value::Atom(a) => Ok(a.name),
+            Value::Atom(a) => Ok(&a.name),
             _ => Err(Error::BadFuncArgs {
                 source_info: source_info.clone(),
                 msg: format!("atom-concat: argument #{} is not an atom", idx),
             })
         }?;
-        buf.push_str(&atom);
+        buf.push_str(atom);
     }
 
     if idx == 0 {
