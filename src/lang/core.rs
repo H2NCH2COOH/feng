@@ -519,3 +519,11 @@ fn func_quote(
 
     Ok(val.clone())
 }
+
+fn func_list(
+    args: &List,
+    _parent_ctx: &Context,
+    _source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    Ok(args.clone().into())
+}
