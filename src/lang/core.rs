@@ -387,7 +387,8 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
     let mut args_iter = args.into_iter();
 
     let key = match args_iter.next() {
-        Some(Value::Atom(a)) => Ok(a),
+        Some(Value::Atom(a)) => Ok(a.clone()),
+        Some(Value::SourceAtom(a)) => Ok(a.into()),
         Some(_) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: "define: the first argument is not an atom".to_string(),
@@ -413,7 +414,7 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
         });
     }
 
-    define(key, val.clone(), ctx);
+    define(&key, val.clone(), ctx);
 
     Ok(EMPTY_LIST)
 }
@@ -428,14 +429,15 @@ fn func_atom_concat(
 
     for v in args.into_iter() {
         idx += 1;
-        let atom = match v {
+        let name = match v {
             Value::Atom(a) => Ok(&a.name),
+            Value::SourceAtom(a) => Ok(&a.name),
             _ => Err(Error::BadFuncArgs {
                 source_info: source_info.clone(),
                 msg: format!("atom-concat: argument #{} is not an atom", idx),
             }),
         }?;
-        buf.push_str(atom);
+        buf.push_str(name);
     }
 
     if idx == 0 {
@@ -455,8 +457,9 @@ fn func_atom_eq(
 ) -> Result<Value, Error> {
     let mut args_iter = args.into_iter();
 
-    let atom = match args_iter.next() {
-        Some(Value::Atom(a)) => Ok(a),
+    let name = match args_iter.next() {
+        Some(Value::Atom(a)) => Ok(&a.name),
+        Some(Value::SourceAtom(a)) => Ok(&a.name),
         Some(_) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: "atom-eq?: argument #1 is not an atom".to_string(),
@@ -470,16 +473,24 @@ fn func_atom_eq(
     let mut idx = 1;
     for v in args_iter {
         idx += 1;
-        if let Value::Atom(a) = v {
-            if a != atom {
-                return Ok(FALSE);
+        match v {
+            Value::Atom(a) => {
+                if &a.name != name {
+                    return Ok(FALSE);
+                }
             }
-        } else {
-            return Err(Error::BadFuncArgs {
-                source_info: source_info.clone(),
-                msg: format!("atom-eq?: argument #{} is not an atom", idx),
-            });
-        }
+            Value::SourceAtom(a) => {
+                if &a.name != name {
+                    return Ok(FALSE);
+                }
+            }
+            _ => {
+                return Err(Error::BadFuncArgs {
+                    source_info: source_info.clone(),
+                    msg: format!("atom-eq?: argument #{} is not an atom", idx),
+                })
+            }
+        };
     }
 
     Ok(TRUE())
@@ -493,6 +504,7 @@ fn func_is_atom(
     for v in args.into_iter() {
         match v {
             Value::Atom(_) => (),
+            Value::SourceAtom(_) => (),
             _ => return Ok(FALSE),
         }
     }
