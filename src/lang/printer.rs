@@ -83,7 +83,7 @@ fn print_fexpr<W: Write>(out: &mut W, fexpr: &Fexpr) -> Result<(), Error> {
         }
         ArgList::Vargs(atom) => write!(out, "{} ", atom.name)?,
     };
-    print_list(out, &fexpr.body);
+    print_list(out, &fexpr.body)?;
     write!(out, ")")?;
     Ok(())
 }

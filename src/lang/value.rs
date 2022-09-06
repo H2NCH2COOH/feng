@@ -65,8 +65,8 @@ define_funcs!(
     ("define!", DefineF),
     ("atom-concat", AtomConcat),
     ("atom-concat!", AtomConcatF),
-    ("atom-eq", AtomEqual),
-    ("atom-eq!", AtomEqualF),
+    ("atom-eq?", AtomEqual),
+    ("atom-eq?!", AtomEqualF),
     ("atom?", IsAtom),
     ("atom?!", IsAtomF),
     ("list?", IsList),
@@ -95,7 +95,11 @@ pub enum Value {
 pub const EMPTY_LIST: Value = Value::List(List::Empty);
 pub const FALSE: Value = EMPTY_LIST;
 thread_local! {
-    pub static TRUE: Value = Value::Atom(Atom::new("true"));
+    static TRUE_TLV: Value = Value::Atom(Atom::new("true"));
+}
+#[allow(non_snake_case)]
+pub fn TRUE() -> Value {
+    TRUE_TLV.with(|v| v.clone())
 }
 
 impl Atom {

@@ -1,7 +1,9 @@
 use super::error::Error;
 use super::source;
 use super::source::SourceInfo;
-use super::value::{ArgList, Atom, Fexpr, Function, List, ListHead, Value, EMPTY_LIST};
+use super::value::{
+    ArgList, Atom, Fexpr, Function, List, ListHead, Value, EMPTY_LIST, FALSE, TRUE,
+};
 use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
@@ -115,13 +117,6 @@ fn list_len(list: ListRef) -> usize {
             List::Head(head) => list_len(ListRef::Value(&head.tail)) + 1,
         },
         ListRef::Source(s) => s.list.len(),
-    }
-}
-
-fn atom_eq(left: &Value, right: &Value) -> bool {
-    match (left, right) {
-        (Value::Atom(left), Value::Atom(right)) => left == right,
-        _ => false,
     }
 }
 
@@ -307,15 +302,13 @@ fn func_eval(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Res
             source_info: source_info.clone(),
             msg: "eval: must have an argument".to_string(),
         }),
-        List::Head(head) => {
-            match head.tail {
-                List::Empty => Ok(&head.val),
-                List::Head(_) => Err(Error::BadFuncArgs {
-                    source_info: source_info.clone(),
-                    msg: "eval: must have only one argument".to_string(),
-                }),
-            }
-        }
+        List::Head(head) => match head.tail {
+            List::Empty => Ok(&head.val),
+            List::Head(_) => Err(Error::BadFuncArgs {
+                source_info: source_info.clone(),
+                msg: "eval: must have only one argument".to_string(),
+            }),
+        },
     }?;
 
     let mut ctx = Context {
@@ -326,26 +319,30 @@ fn func_eval(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Res
     eval(val, &mut ctx, source_info)
 }
 
-fn func_upeval(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+fn func_upeval(
+    args: &List,
+    parent_ctx: &Context,
+    source_info: &SourceInfo,
+) -> Result<Value, Error> {
     let val = match args {
         List::Empty => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: "upeval: must have an argument".to_string(),
         }),
-        List::Head(head) => {
-            match head.tail {
-                List::Empty => Ok(&head.val),
-                List::Head(_) => Err(Error::BadFuncArgs {
-                    source_info: source_info.clone(),
-                    msg: "upeval: must have only one argument".to_string(),
-                }),
-            }
-        }
+        List::Head(head) => match head.tail {
+            List::Empty => Ok(&head.val),
+            List::Head(_) => Err(Error::BadFuncArgs {
+                source_info: source_info.clone(),
+                msg: "upeval: must have only one argument".to_string(),
+            }),
+        },
     }?;
 
     let parent_ctx = match parent_ctx.parent {
         Some(p) => Ok(p),
-        None => Err(Error::NoUpCtx { source_info: source_info.clone() })
+        None => Err(Error::NoUpCtx {
+            source_info: source_info.clone(),
+        }),
     }?;
 
     let mut ctx = Context {
@@ -368,7 +365,7 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
         None => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: "define: must have two arguments".to_string(),
-        })
+        }),
     }?;
 
     let val = match args_iter.next() {
@@ -376,7 +373,7 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
         None => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: "define: must have two arguments".to_string(),
-        })
+        }),
     }?;
 
     if let Some(_) = args_iter.next() {
@@ -391,7 +388,11 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
     Ok(EMPTY_LIST)
 }
 
-fn func_atom_concat(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+fn func_atom_concat(
+    args: &List,
+    _parent_ctx: &Context,
+    source_info: &SourceInfo,
+) -> Result<Value, Error> {
     let mut idx = 0;
     let mut buf = String::with_capacity(1024);
 
@@ -402,7 +403,7 @@ fn func_atom_concat(args: &List, _parent_ctx: &Context, source_info: &SourceInfo
             _ => Err(Error::BadFuncArgs {
                 source_info: source_info.clone(),
                 msg: format!("atom-concat: argument #{} is not an atom", idx),
-            })
+            }),
         }?;
         buf.push_str(atom);
     }
@@ -415,4 +416,41 @@ fn func_atom_concat(args: &List, _parent_ctx: &Context, source_info: &SourceInfo
     }
 
     Ok(Atom::new(&buf).into())
+}
+
+fn func_atom_eq(
+    args: &List,
+    _parent_ctx: &Context,
+    source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    let mut args_iter = args.into_iter();
+
+    let atom = match args_iter.next() {
+        Some(Value::Atom(a)) => Ok(a),
+        Some(_) => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "atom-eq?: argument #1 is not an atom".to_string(),
+        }),
+        _ => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "atom-eq?: must have at least one argument".to_string(),
+        }),
+    }?;
+
+    let mut idx = 1;
+    for v in args_iter {
+        idx += 1;
+        if let Value::Atom(a) = v {
+            if a != atom {
+                return Ok(FALSE);
+            }
+        } else {
+            return Err(Error::BadFuncArgs {
+                source_info: source_info.clone(),
+                msg: format!("atom-eq?: argument #{} is not an atom", idx),
+            });
+        }
+    }
+
+    Ok(TRUE())
 }
