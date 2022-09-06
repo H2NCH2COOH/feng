@@ -527,3 +527,28 @@ fn func_list(
 ) -> Result<Value, Error> {
     Ok(args.clone().into())
 }
+
+fn func_car(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let mut args_iter = args.into_iter();
+
+    let list = match args_iter.next() {
+        Some(Value::List(l)) => Ok(l),
+        Some(_) => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "car: argument is not a list".to_string(),
+        }),
+        None => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "car: must have an argument".to_string(),
+        }),
+    }?;
+
+    if args_iter.next().is_some() {
+        return Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "car: must have only one argument".to_string(),
+        });
+    }
+
+    Ok(car(list.into()).unwrap_or(EMPTY_LIST))
+}
