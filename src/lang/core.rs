@@ -114,7 +114,7 @@ fn list_len(list: ListRef) -> usize {
     match list {
         ListRef::Value(v) => match v {
             List::Empty => 0,
-            List::Head(head) => list_len(ListRef::Value(&head.tail)) + 1,
+            List::Head(head) => list_len((&head.tail).into()) + 1,
         },
         ListRef::Source(s) => s.list.len(),
     }
@@ -129,7 +129,7 @@ fn lookup(key: &Atom, ctx: &Context, source_info: &SourceInfo) -> Result<Value, 
         Some(val) => Ok(val.clone()),
         None => match &ctx.parent {
             Some(parent) => lookup(key, parent, source_info),
-            None => Ok(Value::Atom(key.clone())),
+            None => Ok(key.clone().into()),
         },
     }
 }
@@ -159,6 +159,7 @@ fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Valu
     match val {
         Value::Atom(atom) => lookup(atom, ctx, source_info),
         Value::List(list) => call(list.into(), ctx, source_info),
+        Value::SourceAtom(atom) => lookup(&atom.into(), ctx, source_info),
         Value::SourceList(list) => call(list.into(), ctx, &list.source_info),
         _ => Err(Error::CantEval {
             source_info: source_info.clone(),
@@ -199,12 +200,12 @@ fn apply_args(
 ) -> Result<(), Error> {
     match arg_list {
         ArgList::Vargs(atom) => {
-            define(atom, Value::List(args.clone()), ctx);
+            define(atom, args.clone().into(), ctx);
             Ok(())
         }
         ArgList::Args(list) => {
             let expected = list.len();
-            let found = list_len(ListRef::Value(args));
+            let found = list_len(args.into());
             if expected != found {
                 Err(Error::BadArgsNum {
                     source_info: source_info.clone(),
@@ -242,7 +243,7 @@ fn call_fexpr(
         map: HashMap::new(),
     };
     apply_args(&fexpr.arg_list, args, &mut ctx, source_info)?;
-    eval(&Value::List(fexpr.body.clone()), &mut ctx, source_info)
+    eval(&fexpr.body.clone().into(), &mut ctx, source_info)
 }
 
 fn call_function(
@@ -289,7 +290,7 @@ fn func_puts(
     _source_info: &SourceInfo,
 ) -> Result<Value, Error> {
     for v in args {
-        super::print(&mut std::io::stdout(), &v)?;
+        super::print(&mut std::io::stdout(), v)?;
     }
     std::io::stdout().write_all(b"\n")?;
 
@@ -318,9 +319,9 @@ fn func_cond(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Res
             Some(v) => v,
         };
 
-        let test = eval(&test, &mut ctx, source_info)?;
+        let test = eval(test, &mut ctx, source_info)?;
         if test.into() {
-            break eval(&val, &mut ctx, source_info);
+            break eval(val, &mut ctx, source_info);
         }
     }
 }
@@ -405,14 +406,14 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
         }),
     }?;
 
-    if let Some(_) = args_iter.next() {
+    if args_iter.next().is_some() {
         return Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: "define: must have only two arguments".to_string(),
         });
     }
 
-    define(&key, val.clone(), ctx);
+    define(key, val.clone(), ctx);
 
     Ok(EMPTY_LIST)
 }

@@ -20,3 +20,13 @@ where
 pub fn print<W: std::io::Write>(out: &mut W, val: &value::Value) -> Result<(), Error> {
     printer::print(out, val)
 }
+
+pub fn println<W: std::io::Write>(out: &mut W, val: &value::Value) -> Result<(), Error> {
+    printer::print(out, val)?;
+    out.write_all(b"\n")?;
+    Ok(())
+}
+
+pub fn eval_source(src: &[source::Value]) -> Result<value::Value, Error> {
+    core::eval_source(src)
+}
