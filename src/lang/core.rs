@@ -484,3 +484,16 @@ fn func_is_list(
 
     Ok(TRUE())
 }
+
+fn func_begin(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let mut ctx = Context {
+        parent: Some(parent_ctx),
+        map: HashMap::new(),
+    };
+
+    let mut rst = EMPTY_LIST;
+    for v in args {
+        rst = eval(v, &mut ctx, source_info)?;
+    }
+    Ok(rst)
+}
