@@ -497,3 +497,25 @@ fn func_begin(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Re
     }
     Ok(rst)
 }
+
+fn func_quote(
+    args: &List,
+    _parent_ctx: &Context,
+    source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    let mut args_iter = args.into_iter();
+
+    let val = args_iter.next().ok_or(Error::BadFuncArgs {
+        source_info: source_info.clone(),
+        msg: "quote: must have an argument".to_string(),
+    })?;
+
+    if args_iter.next().is_some() {
+        return Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "quote: must have only one argument".to_string(),
+        });
+    }
+
+    Ok(val.clone())
+}
