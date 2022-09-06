@@ -200,21 +200,6 @@ fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Valu
     }
 }
 
-fn upeval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    match ctx.parent {
-        Some(parent) => {
-            let mut ctx = Context {
-                parent: Some(parent),
-                map: HashMap::new(),
-            };
-            eval(val, &mut ctx, source_info)
-        }
-        None => Err(Error::NoUpCtx {
-            source_info: source_info.clone(),
-        }),
-    }
-}
-
 fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
     let callable = car(list).ok_or(Error::CantEval {
         source_info: source_info.clone(),
@@ -342,4 +327,120 @@ fn func_cond(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Res
             break eval(&val, &mut ctx, source_info);
         }
     }
+}
+
+fn func_eval(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let val = match args {
+        List::Empty => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "eval: must have an argument".to_string(),
+        }),
+        List::Head(head) => {
+            match head.tail {
+                List::Empty => Ok(&head.val),
+                List::Head(_) => Err(Error::BadFuncArgs {
+                    source_info: source_info.clone(),
+                    msg: "eval: must have only one argument".to_string(),
+                }),
+            }
+        }
+    }?;
+
+    let mut ctx = Context {
+        parent: Some(parent_ctx),
+        map: HashMap::new(),
+    };
+
+    eval(val, &mut ctx, source_info)
+}
+
+fn func_upeval(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let val = match args {
+        List::Empty => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "upeval: must have an argument".to_string(),
+        }),
+        List::Head(head) => {
+            match head.tail {
+                List::Empty => Ok(&head.val),
+                List::Head(_) => Err(Error::BadFuncArgs {
+                    source_info: source_info.clone(),
+                    msg: "upeval: must have only one argument".to_string(),
+                }),
+            }
+        }
+    }?;
+
+    let parent_ctx = match parent_ctx.parent {
+        Some(p) => Ok(p),
+        None => Err(Error::NoUpCtx { source_info: source_info.clone() })
+    }?;
+
+    let mut ctx = Context {
+        parent: Some(parent_ctx),
+        map: HashMap::new(),
+    };
+
+    eval(val, &mut ctx, source_info)
+}
+
+fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let mut args_iter = args.into_iter();
+
+    let key = match args_iter.next() {
+        Some(Value::Atom(a)) => Ok(a),
+        Some(_) => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "define: the first argument must be an atom".to_string(),
+        }),
+        None => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "define: must have two arguments".to_string(),
+        })
+    }?;
+
+    let val = match args_iter.next() {
+        Some(v) => Ok(v),
+        None => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "define: must have two arguments".to_string(),
+        })
+    }?;
+
+    if let Some(_) = args_iter.next() {
+        return Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "define: must have only two arguments".to_string(),
+        });
+    }
+
+    define(&key, val, ctx);
+
+    Ok(EMPTY_LIST)
+}
+
+fn func_atom_concat(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let mut idx = 0;
+    let mut buf = String::with_capacity(1024);
+
+    for v in args.into_iter() {
+        idx += 1;
+        let atom = match v {
+            Value::Atom(a) => Ok(a.name),
+            _ => Err(Error::BadFuncArgs {
+                source_info: source_info.clone(),
+                msg: format!("atom-concat: argument #{} is not an atom", idx),
+            })
+        }?;
+        buf.push_str(&atom);
+    }
+
+    if idx == 0 {
+        return Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "atom-concat: must have at least one argument".to_string(),
+        });
+    }
+
+    Ok(Atom::new(&buf).into())
 }
