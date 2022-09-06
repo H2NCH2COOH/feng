@@ -360,7 +360,7 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
         Some(Value::Atom(a)) => Ok(a),
         Some(_) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
-            msg: "define: the first argument must be an atom".to_string(),
+            msg: "define: the first argument is not an atom".to_string(),
         }),
         None => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
@@ -372,7 +372,7 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
         Some(v) => Ok(v),
         None => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
-            msg: "define: must have two arguments".to_string(),
+            msg: "define: must a second argument".to_string(),
         }),
     }?;
 
@@ -576,4 +576,37 @@ fn func_cdr(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Res
     }
 
     Ok(cdr(list.into()).unwrap_or(List::Empty).into())
+}
+
+fn func_cons(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let mut args_iter = args.into_iter();
+
+    let head = match args_iter.next() {
+        Some(v) => Ok(v),
+        None => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "cons: must have two arguments".to_string(),
+        }),
+    }?;
+
+    let tail = match args_iter.next() {
+        Some(Value::List(l)) => Ok(l),
+        Some(_) => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "cons: the second argument is not a list".to_string(),
+        }),
+        None => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "cons: must a second argument".to_string(),
+        }),
+    }?;
+
+    if args_iter.next().is_some() {
+        return Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "cons: must have only two arguments".to_string(),
+        });
+    }
+
+    Ok(cons(head, tail.into()).into())
 }
