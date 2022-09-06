@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
 
+#[derive(Debug)]
 struct Context<'a> {
     parent: Option<&'a Self>,
     map: HashMap<Atom, Value>,
@@ -169,10 +170,10 @@ fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Valu
 }
 
 fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    let callable = car(list).ok_or(Error::CantEval {
-        source_info: source_info.clone(),
-        val: list.into(),
-    })?;
+    let callable = match car(list) {
+        Some(v) => v,
+        None => return Ok(EMPTY_LIST),
+    };
 
     let callable = match &callable {
         Value::Atom(atom) => lookup(atom, ctx, source_info)?,
@@ -272,9 +273,13 @@ fn call_function(
         Function::IsAtomF => func_is_atom(args, ctx, source_info),
         Function::IsList => func_is_list(&eval_args(args, ctx, source_info)?, ctx, source_info),
         Function::IsListF => func_is_list(args, ctx, source_info),
+        Function::IsFexpr => func_is_fexpr(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::IsFexprF => func_is_fexpr(args, ctx, source_info),
         Function::BeginF => func_begin(args, ctx, source_info),
         Function::QuoteF => func_quote(args, ctx, source_info),
         Function::List => func_list(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::Fexpr => func_fexpr(&eval_args(args, ctx, source_info)?, ctx, source_info),
+        Function::FexprF => func_fexpr(args, ctx, source_info),
         Function::Car => func_car(&eval_args(args, ctx, source_info)?, ctx, source_info),
         Function::CarF => func_car(args, ctx, source_info),
         Function::Cdr => func_cdr(&eval_args(args, ctx, source_info)?, ctx, source_info),
@@ -297,12 +302,7 @@ fn func_puts(
     Ok(EMPTY_LIST)
 }
 
-fn func_cond(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    let mut ctx = Context {
-        parent: Some(parent_ctx),
-        map: HashMap::new(),
-    };
-
+fn func_cond(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
     let mut iter = args.into_iter();
     loop {
         let test = match iter.next() {
@@ -319,9 +319,9 @@ fn func_cond(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Res
             Some(v) => v,
         };
 
-        let test = eval(test, &mut ctx, source_info)?;
+        let test = eval(test, ctx, source_info)?;
         if test.into() {
-            break eval(val, &mut ctx, source_info);
+            break eval(val, ctx, source_info);
         }
     }
 }
@@ -527,6 +527,21 @@ fn func_is_list(
     Ok(TRUE())
 }
 
+fn func_is_fexpr(
+    args: &List,
+    _parent_ctx: &Context,
+    _source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    for v in args.into_iter() {
+        match v {
+            Value::Fexpr(_) => (),
+            _ => return Ok(FALSE),
+        }
+    }
+
+    Ok(TRUE())
+}
+
 fn func_begin(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
     let mut ctx = Context {
         parent: Some(parent_ctx),
@@ -568,6 +583,85 @@ fn func_list(
     _source_info: &SourceInfo,
 ) -> Result<Value, Error> {
     Ok(args.clone().into())
+}
+
+fn func_fexpr(
+    args: &List,
+    _parent_ctx: &Context,
+    source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    let mut args_iter = args.into_iter();
+
+    let arg_list = match args_iter.next() {
+        Some(Value::Atom(a)) => Ok(ArgList::Vargs(a.clone())),
+        Some(Value::SourceAtom(a)) => Ok(ArgList::Vargs(a.into())),
+        Some(Value::List(l)) => {
+            let mut atom_vec = Vec::new();
+            for v in l.into_iter() {
+                match v {
+                    Value::Atom(a) => {
+                        atom_vec.push(a.clone());
+                        Ok(())
+                    }
+                    Value::SourceAtom(a) => {
+                        atom_vec.push(a.into());
+                        Ok(())
+                    }
+                    _ => Err(Error::BadFuncArgs {
+                        source_info: source_info.clone(),
+                        msg: "fexpr: the argument list contains non-atom".to_string(),
+                    }),
+                }?;
+            }
+            Ok(ArgList::Args(Rc::from(atom_vec)))
+        }
+        Some(Value::SourceList(l)) => {
+            let mut atom_vec = Vec::new();
+            for v in l.list.iter() {
+                match v {
+                    source::Value::Atom(a) => {
+                        atom_vec.push(a.into());
+                        Ok(())
+                    }
+                    _ => Err(Error::BadFuncArgs {
+                        source_info: source_info.clone(),
+                        msg: "fexpr: the argument list contains non-atom".to_string(),
+                    }),
+                }?;
+            }
+            Ok(ArgList::Args(Rc::from(atom_vec)))
+        }
+        Some(_) => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "fexpr: the first argument must be either an atom or a list of atoms".to_string(),
+        }),
+        None => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "fexpr: must have two arguments".to_string(),
+        }),
+    }?;
+
+    let body = match args_iter.next() {
+        Some(Value::List(l)) => Ok(l.clone()),
+        Some(Value::SourceList(l)) => Ok(l.into()),
+        Some(_) => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "fexpr: the body is not a list".to_string(),
+        }),
+        _ => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "fexpr: must have a second argument".to_string(),
+        }),
+    }?;
+
+    if args_iter.next().is_some() {
+        return Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "fexpr: must have only two arguments".to_string(),
+        });
+    }
+
+    Ok(Value::Fexpr(Fexpr { arg_list, body }))
 }
 
 fn func_car(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
