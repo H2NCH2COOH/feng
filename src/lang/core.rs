@@ -145,6 +145,10 @@ fn create_root_context() -> Context<'static> {
         define(&Atom::new(name), Value::Function(*func), &mut ctx);
     }
 
+    define(&Atom::new("SPACE"), Atom::new(" ").into(), &mut ctx);
+    define(&Atom::new("LPAR"), Atom::new("(").into(), &mut ctx);
+    define(&Atom::new("RPAR"), Atom::new(")").into(), &mut ctx);
+
     ctx
 }
 
