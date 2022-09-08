@@ -452,9 +452,9 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
     let key = match args_iter.next() {
         Some(Value::Atom(a)) => Ok(a.clone()),
         Some(Value::SourceAtom(a)) => Ok(a.into()),
-        Some(_) => Err(Error::BadFuncArgs {
+        Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
-            msg: "define: the first argument is not an atom".to_string(),
+            msg: format!("define: the first argument `{}' is not an atom", v),
         }),
         None => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
@@ -497,7 +497,7 @@ fn func_atom_concat(
             Value::SourceAtom(a) => Ok(&a.name),
             _ => Err(Error::BadFuncArgs {
                 source_info: source_info.clone(),
-                msg: format!("atom-concat: argument #{} is not an atom", idx),
+                msg: format!("atom-concat: argument #{} `{}' is not an atom", idx, v),
             }),
         }?;
         buf.push_str(name);
@@ -523,9 +523,9 @@ fn func_atom_eq(
     let name = match args_iter.next() {
         Some(Value::Atom(a)) => Ok(&a.name),
         Some(Value::SourceAtom(a)) => Ok(&a.name),
-        Some(_) => Err(Error::BadFuncArgs {
+        Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
-            msg: "atom-eq?: argument #1 is not an atom".to_string(),
+            msg: format!("atom-eq?: argument #1 `{}' is not an atom", v),
         }),
         _ => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
@@ -550,7 +550,7 @@ fn func_atom_eq(
             _ => {
                 return Err(Error::BadFuncArgs {
                     source_info: source_info.clone(),
-                    msg: format!("atom-eq?: argument #{} is not an atom", idx),
+                    msg: format!("atom-eq?: argument #{} `{}' is not an atom", idx, v),
                 })
             }
         };
@@ -708,9 +708,9 @@ fn func_fexpr(
     let body = match args_iter.next() {
         Some(Value::List(l)) => Ok(l.clone()),
         Some(Value::SourceList(l)) => Ok(l.into()),
-        Some(_) => Err(Error::BadFuncArgs {
+        Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
-            msg: "fexpr: the body is not a list".to_string(),
+            msg: format!("fexpr: the body `{}' is not a list", v),
         }),
         _ => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
@@ -733,9 +733,9 @@ fn func_car(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Res
 
     let list = match args_iter.next() {
         Some(Value::List(l)) => Ok(l),
-        Some(_) => Err(Error::BadFuncArgs {
+        Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
-            msg: "car: argument is not a list".to_string(),
+            msg: format!("car: argument `{}' is not a list", v),
         }),
         None => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
@@ -758,9 +758,9 @@ fn func_cdr(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Res
 
     let list = match args_iter.next() {
         Some(Value::List(l)) => Ok(l),
-        Some(_) => Err(Error::BadFuncArgs {
+        Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
-            msg: "cdr: argument is not a list".to_string(),
+            msg: format!("cdr: argument `{}' is not a list", v),
         }),
         None => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
@@ -791,9 +791,9 @@ fn func_cons(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Re
 
     let tail = match args_iter.next() {
         Some(Value::List(l)) => Ok(l),
-        Some(_) => Err(Error::BadFuncArgs {
+        Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
-            msg: "cons: the second argument is not a list".to_string(),
+            msg: format!("cons: the second argument `{}' is not a list", v),
         }),
         None => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
