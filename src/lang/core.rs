@@ -12,6 +12,7 @@ use std::rc::Rc;
 struct Context<'a> {
     parent: Option<&'a Self>,
     map: HashMap<Atom, Value>,
+    is_upeval: bool,
 }
 
 #[derive(Copy, Clone)]
@@ -139,6 +140,7 @@ fn create_root_context() -> Context<'static> {
     let mut ctx = Context {
         parent: None,
         map: HashMap::new(),
+        is_upeval: false,
     };
 
     for (name, func) in super::value::NAMED_FUNCS {
@@ -246,6 +248,7 @@ fn call_fexpr(
     let mut ctx = Context {
         parent: Some(parent_ctx),
         map: HashMap::new(),
+        is_upeval: false,
     };
     apply_args(&fexpr.arg_list, args, &mut ctx, source_info)?;
     eval(&fexpr.body.clone().into(), &mut ctx, source_info)
@@ -391,6 +394,7 @@ fn func_eval(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Res
     let mut ctx = Context {
         parent: Some(parent_ctx),
         map: HashMap::new(),
+        is_upeval: false,
     };
 
     eval(val, &mut ctx, source_info)
@@ -415,6 +419,17 @@ fn func_upeval(
         },
     }?;
 
+    let mut parent_ctx = parent_ctx;
+    while parent_ctx.is_upeval {
+        if let Some(p) = parent_ctx.parent {
+            parent_ctx = p;
+        } else {
+            return Err(Error::NoUpCtx {
+                source_info: source_info.clone(),
+            });
+        }
+    }
+
     let parent_ctx = match parent_ctx.parent {
         Some(p) => Ok(p),
         None => Err(Error::NoUpCtx {
@@ -425,6 +440,7 @@ fn func_upeval(
     let mut ctx = Context {
         parent: Some(parent_ctx),
         map: HashMap::new(),
+        is_upeval: true,
     };
 
     eval(val, &mut ctx, source_info)
@@ -593,6 +609,7 @@ fn func_begin(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Re
     let mut ctx = Context {
         parent: Some(parent_ctx),
         map: HashMap::new(),
+        is_upeval: false,
     };
 
     let mut rst = EMPTY_LIST;
