@@ -56,6 +56,8 @@ macro_rules! define_funcs {
 define_funcs!(
     ("puts", Puts),
     ("puts!", PutsF),
+    ("assert", Assert),
+    ("not", Not),
     ("cond", Cond),
     ("eval", Eval),
     ("eval!", EvalF),

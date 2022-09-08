@@ -260,6 +260,8 @@ fn call_function(
     match func {
         Function::Puts => func_puts(&eval_args(args, ctx, source_info)?, ctx, source_info),
         Function::PutsF => func_puts(args, ctx, source_info),
+        Function::Assert => func_assert(args, ctx, source_info),
+        Function::Not => func_not(args, ctx, source_info),
         Function::Cond => func_cond(args, ctx, source_info),
         Function::Eval => func_eval(&eval_args(args, ctx, source_info)?, ctx, source_info),
         Function::EvalF => func_eval(args, ctx, source_info),
@@ -306,14 +308,55 @@ fn func_puts(
     Ok(EMPTY_LIST)
 }
 
+fn func_assert(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    for (idx, v) in args.into_iter().enumerate() {
+        let val = eval(v, ctx, source_info)?;
+        if val.into() {
+            continue;
+        } else {
+            return Err(Error::AssertError {
+                source_info: source_info.clone(),
+                msg: format!("argument #{} `{}' eval to an empty list", idx + 1, v),
+            });
+        }
+    }
+
+    Ok(EMPTY_LIST)
+}
+
+fn func_not(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
+    let mut args_iter = args.into_iter();
+
+    let val = match args_iter.next() {
+        Some(v) => Ok(v),
+        None => Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "define: must an argument".to_string(),
+        }),
+    }?;
+
+    if args_iter.next().is_some() {
+        return Err(Error::BadFuncArgs {
+            source_info: source_info.clone(),
+            msg: "not: must have only one arguments".to_string(),
+        });
+    }
+
+    if eval(val, ctx, source_info)?.into() {
+        Ok(FALSE)
+    } else {
+        Ok(TRUE())
+    }
+}
+
 fn func_cond(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    let mut iter = args.into_iter();
+    let mut args_iter = args.into_iter();
     loop {
-        let test = match iter.next() {
+        let test = match args_iter.next() {
             None => break Ok(EMPTY_LIST),
             Some(v) => v,
         };
-        let val = match iter.next() {
+        let val = match args_iter.next() {
             None => {
                 break Err(Error::BadFuncArgs {
                     source_info: source_info.clone(),

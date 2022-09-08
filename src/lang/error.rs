@@ -27,6 +27,10 @@ pub enum Error {
         source_info: SourceInfo,
         msg: String,
     },
+    AssertError {
+        source_info: SourceInfo,
+        msg: String,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -57,6 +61,9 @@ impl std::fmt::Display for Error {
             }
             Error::BadFuncArgs { source_info, msg } => {
                 write!(f, "Bad arguments: {}\n\tAt {}", msg, source_info)
+            }
+            Error::AssertError { source_info, msg } => {
+                write!(f, "Assert failed with: {}\n\tAt {}", msg, source_info)
             }
         }
     }

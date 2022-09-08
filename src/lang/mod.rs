@@ -6,6 +6,8 @@ mod error;
 mod parser;
 mod printer;
 mod source;
+#[cfg(test)]
+mod tests;
 mod value;
 
 use error::Error;
@@ -15,6 +17,10 @@ where
     S: Iterator<Item = std::io::Result<u8>>,
 {
     parser::parse(name, chars::Chars::new(stream))
+}
+
+pub fn parse_str(s: &str) -> Result<Vec<source::Value>, Error> {
+    parser::parse(&format!("str:`{:.10}...'", s.trim()), s.chars().map(Ok))
 }
 
 pub fn print<W: std::io::Write>(out: &mut W, val: &value::Value) -> Result<(), Error> {
