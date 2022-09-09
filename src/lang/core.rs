@@ -251,7 +251,13 @@ fn call_fexpr(
         is_upeval: false,
     };
     apply_args(&fexpr.arg_list, args, &mut ctx, source_info)?;
-    eval(&fexpr.body.clone().into(), &mut ctx, source_info)
+
+    let mut ret = EMPTY_LIST;
+    for v in fexpr.body.into_iter() {
+        ret = eval(v, &mut ctx, source_info)?;
+    }
+
+    Ok(ret)
 }
 
 fn call_function(

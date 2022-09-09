@@ -44,3 +44,15 @@ fn basic_upeval() {
 ";
     eval_source(&parse_str(code).unwrap()).unwrap();
 }
+
+#[test]
+fn basic_fexpr() {
+    let code = "\
+(define f! (fexpr! (a b) ((atom-eq? a b))))
+(assert (f! 1 1))
+
+(define g! (fexpr! args ((eval (cons (quote! atom-concat) args)))))
+(assert (g! 1 2 3) 123)
+";
+    eval_source(&parse_str(code).unwrap()).unwrap();
+}
