@@ -12,7 +12,37 @@ use std::rc::Rc;
 struct Context<'a> {
     parent: Option<&'a Self>,
     map: HashMap<Atom, Value>,
+    map_weak: HashMap<Atom, Value>,
     is_upeval: bool,
+}
+
+impl<'a> Context<'a> {
+    fn new(parent: &'a Context) -> Self {
+        Self {
+            parent: Some(parent),
+            is_upeval: false,
+            map: HashMap::new(),
+            map_weak: HashMap::new(),
+        }
+    }
+
+    fn new_root() -> Self {
+        Self {
+            parent: None,
+            is_upeval: false,
+            map: HashMap::new(),
+            map_weak: HashMap::new(),
+        }
+    }
+
+    fn new_upeval(parent: &'a Context) -> Self {
+        Self {
+            parent: Some(parent),
+            is_upeval: true,
+            map: HashMap::new(),
+            map_weak: HashMap::new(),
+        }
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -122,34 +152,53 @@ fn list_len(list: ListRef) -> usize {
     }
 }
 
-fn define(key: &Atom, val: Value, ctx: &mut Context) {
-    ctx.map.insert(key.clone(), val);
+fn define(
+    key: &Atom,
+    val: Value,
+    ctx: &mut Context,
+    source_info: &SourceInfo,
+) -> Result<(), Error> {
+    match ctx.map.get(key) {
+        Some(v) => Err(Error::Redefinition {
+            source_info: source_info.clone(),
+            key: key.clone(),
+            old_val: v.clone(),
+            new_val: val,
+        }),
+        None => {
+            ctx.map.insert(key.clone(), val);
+            Ok(())
+        }
+    }
+}
+
+fn define_weak(key: &Atom, val: Value, ctx: &mut Context) {
+    ctx.map_weak.insert(key.clone(), val);
 }
 
 fn lookup(key: &Atom, ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
     match ctx.map.get(key) {
         Some(val) => Ok(val.clone()),
-        None => match &ctx.parent {
-            Some(parent) => lookup(key, parent, source_info),
-            None => Ok(key.clone().into()),
+        None => match ctx.map_weak.get(key) {
+            Some(val) => Ok(val.clone()),
+            None => match &ctx.parent {
+                Some(parent) => lookup(key, parent, source_info),
+                None => Ok(key.clone().into()),
+            },
         },
     }
 }
 
 fn create_root_context() -> Context<'static> {
-    let mut ctx = Context {
-        parent: None,
-        map: HashMap::new(),
-        is_upeval: false,
-    };
+    let mut ctx = Context::new_root();
 
     for (name, func) in super::value::NAMED_FUNCS {
-        define(&Atom::new(name), Value::Function(*func), &mut ctx);
+        define_weak(&Atom::new(name), Value::Function(*func), &mut ctx);
     }
 
-    define(&Atom::new("SPACE"), Atom::new(" ").into(), &mut ctx);
-    define(&Atom::new("LPAR"), Atom::new("(").into(), &mut ctx);
-    define(&Atom::new("RPAR"), Atom::new(")").into(), &mut ctx);
+    define_weak(&Atom::new("SPACE"), Atom::new(" ").into(), &mut ctx);
+    define_weak(&Atom::new("LPAR"), Atom::new("(").into(), &mut ctx);
+    define_weak(&Atom::new("RPAR"), Atom::new(")").into(), &mut ctx);
 
     ctx
 }
@@ -207,7 +256,7 @@ fn apply_args(
 ) -> Result<(), Error> {
     match arg_list {
         ArgList::Vargs(atom) => {
-            define(atom, args.clone().into(), ctx);
+            define_weak(atom, args.clone().into(), ctx);
             Ok(())
         }
         ArgList::Args(list) => {
@@ -221,7 +270,7 @@ fn apply_args(
                 })
             } else {
                 for (atom, val) in std::iter::zip(list.iter(), args.into_iter()) {
-                    define(atom, val.clone(), ctx);
+                    define_weak(atom, val.clone(), ctx);
                 }
                 Ok(())
             }
@@ -245,11 +294,7 @@ fn call_fexpr(
     parent_ctx: &Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
-    let mut ctx = Context {
-        parent: Some(parent_ctx),
-        map: HashMap::new(),
-        is_upeval: false,
-    };
+    let mut ctx = Context::new(parent_ctx);
     apply_args(&fexpr.arg_list, args, &mut ctx, source_info)?;
 
     let mut ret = EMPTY_LIST;
@@ -397,12 +442,7 @@ fn func_eval(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Res
         },
     }?;
 
-    let mut ctx = Context {
-        parent: Some(parent_ctx),
-        map: HashMap::new(),
-        is_upeval: false,
-    };
-
+    let mut ctx = Context::new(parent_ctx);
     eval(val, &mut ctx, source_info)
 }
 
@@ -443,12 +483,7 @@ fn func_upeval(
         }),
     }?;
 
-    let mut ctx = Context {
-        parent: Some(parent_ctx),
-        map: HashMap::new(),
-        is_upeval: true,
-    };
-
+    let mut ctx = Context::new_upeval(parent_ctx);
     eval(val, &mut ctx, source_info)
 }
 
@@ -483,7 +518,7 @@ fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Resu
         });
     }
 
-    define(&key, val.clone(), ctx);
+    define(&key, val.clone(), ctx, source_info)?;
 
     Ok(EMPTY_LIST)
 }
@@ -612,12 +647,7 @@ fn func_is_fexpr(
 }
 
 fn func_begin(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    let mut ctx = Context {
-        parent: Some(parent_ctx),
-        map: HashMap::new(),
-        is_upeval: false,
-    };
-
+    let mut ctx = Context::new(parent_ctx);
     let mut rst = EMPTY_LIST;
     for v in args {
         rst = eval(v, &mut ctx, source_info)?;

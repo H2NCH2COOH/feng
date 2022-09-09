@@ -31,6 +31,12 @@ pub enum Error {
         source_info: SourceInfo,
         msg: String,
     },
+    Redefinition {
+        source_info: SourceInfo,
+        key: super::value::Atom,
+        old_val: super::value::Value,
+        new_val: super::value::Value,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -64,6 +70,18 @@ impl std::fmt::Display for Error {
             }
             Error::AssertError { source_info, msg } => {
                 write!(f, "Assert failed with: {}\n\tAt {}", msg, source_info)
+            }
+            Error::Redefinition {
+                source_info,
+                key,
+                old_val,
+                new_val,
+            } => {
+                write!(
+                    f,
+                    "Can't redefine {} from {} to {}\n\tAt {}",
+                    key, old_val, new_val, source_info
+                )
             }
         }
     }
