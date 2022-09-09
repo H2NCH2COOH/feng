@@ -60,6 +60,7 @@ fn basic_fexpr() {
 #[test]
 fn recursive_upeval() {
     let code = "\
+(define thisctx ())
 (define upctx (fexpr! args (
     (cond
         args
@@ -90,7 +91,8 @@ fn recursive_upeval() {
 
 (define! a 1)
 (begin!
-    (assert (atom-eq? (f (upctx) (quote! a)))))
+    (assert (atom-eq? (f (upctx) (quote! a)) 1)))
+(assert (atom-eq? (f thisctx (quote! a)) 1))
 ";
     eval_source(&parse_str(code).unwrap()).unwrap();
 }
