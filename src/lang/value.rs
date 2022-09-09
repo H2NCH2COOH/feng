@@ -151,10 +151,10 @@ impl From<Atom> for Value {
 impl List {}
 
 impl From<&Value> for bool {
-    #[allow(clippy::match_like_matches_macro)]
     fn from(that: &Value) -> Self {
         match that {
             Value::List(List::Empty) => false,
+            Value::SourceList(l) => !l.list.is_empty(),
             _ => true,
         }
     }
