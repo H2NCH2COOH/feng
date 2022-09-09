@@ -56,3 +56,41 @@ fn basic_fexpr() {
 ";
     eval_source(&parse_str(code).unwrap()).unwrap();
 }
+
+#[test]
+fn recursive_upeval() {
+    let code = "\
+(define upctx (fexpr! args (
+    (cond
+        args
+            (cons (quote! UP) (upeval (car args)))))))
+        else
+            (quote! (UP))
+
+(define eval-at (fexpr! (v ctx) (
+    (define _build_upeval_chain (fexpr! (v ctx) (
+        (define (quote! v) (upeval v))
+        (define (quote! ctx) (upeval ctx))
+        (cond
+            ctx
+                (list upeval! (_build_upeval_chain v (cdr ctx)))
+            else
+                (list upeval! v)))))
+    (upeval (_build_upeval_chain (upeval v) (upeval ctx))))))
+
+(define f (fexpr! (ctx dep) (
+    (define (quote! ctx) (upeval ctx))
+    (define (quote! dep) (upeval dep))
+    (define (quote! a) dep)
+    (cond
+        (atom-eq? dep (quote! aaaaaaaaa))
+            (eval-at (quote! a) ctx)
+        else
+            (f (upctx ctx) (atom-concat dep (quote! a)))))))
+
+(define! a 1)
+(begin!
+    (assert (atom-eq? (f (upctx) (quote! a)))))
+";
+    eval_source(&parse_str(code).unwrap()).unwrap();
+}
