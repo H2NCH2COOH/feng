@@ -738,7 +738,8 @@ fn func_car(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Res
     let mut args_iter = args.into_iter();
 
     let list = match args_iter.next() {
-        Some(Value::List(l)) => Ok(l),
+        Some(Value::List(l)) => Ok(l.clone()),
+        Some(Value::SourceList(l)) => Ok(l.into()),
         Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: format!("car: argument `{}' is not a list", v),
@@ -756,14 +757,15 @@ fn func_car(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Res
         });
     }
 
-    Ok(car(list.into()).unwrap_or(EMPTY_LIST))
+    Ok(car((&list).into()).unwrap_or(EMPTY_LIST))
 }
 
 fn func_cdr(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
     let mut args_iter = args.into_iter();
 
     let list = match args_iter.next() {
-        Some(Value::List(l)) => Ok(l),
+        Some(Value::List(l)) => Ok(l.clone()),
+        Some(Value::SourceList(l)) => Ok(l.into()),
         Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: format!("cdr: argument `{}' is not a list", v),
@@ -781,7 +783,7 @@ fn func_cdr(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Res
         });
     }
 
-    Ok(cdr(list.into()).unwrap_or(List::Empty).into())
+    Ok(cdr((&list).into()).unwrap_or(List::Empty).into())
 }
 
 fn func_cons(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
@@ -796,7 +798,8 @@ fn func_cons(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Re
     }?;
 
     let tail = match args_iter.next() {
-        Some(Value::List(l)) => Ok(l),
+        Some(Value::List(l)) => Ok(l.clone()),
+        Some(Value::SourceList(l)) => Ok(l.into()),
         Some(v) => Err(Error::BadFuncArgs {
             source_info: source_info.clone(),
             msg: format!("cons: the second argument `{}' is not a list", v),
@@ -814,5 +817,5 @@ fn func_cons(args: &List, _parent_ctx: &Context, source_info: &SourceInfo) -> Re
         });
     }
 
-    Ok(cons(head, tail.into()).into())
+    Ok(cons(head, (&tail).into()).into())
 }
