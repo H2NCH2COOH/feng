@@ -211,6 +211,7 @@ pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
     })
 }
 
+#[inline(always)]
 fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
     match val {
         Value::Atom(atom) => lookup(atom, ctx, source_info),
@@ -224,6 +225,7 @@ fn eval(val: &Value, ctx: &mut Context, source_info: &SourceInfo) -> Result<Valu
     }
 }
 
+#[inline(always)]
 fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
     let callable = match car(list) {
         Some(v) => v,
@@ -288,6 +290,7 @@ fn eval_args(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result
     })
 }
 
+#[inline(always)]
 fn call_fexpr(
     fexpr: &Fexpr,
     args: &List,
@@ -305,6 +308,7 @@ fn call_fexpr(
     Ok(ret)
 }
 
+#[inline(always)]
 fn call_function(
     func: &Function,
     args: &List,
