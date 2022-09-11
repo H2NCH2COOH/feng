@@ -281,13 +281,22 @@ fn apply_args(
 }
 
 fn eval_args(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<List, Error> {
-    Ok(match args {
-        List::Empty => List::Empty,
-        List::Head(head) => cons(
-            &eval(&head.val, ctx, source_info)?,
-            (&eval_args(&head.tail, ctx, source_info)?).into(),
-        ),
-    })
+    let mut args_vec: Vec<Value> = Vec::new();
+    for v in args {
+        let rst = eval(v, ctx, source_info)?;
+        println!("{} -> {}", v, rst);
+        args_vec.push(rst);
+    }
+
+    let mut head = List::Empty;
+    for v in args_vec.iter().rev() {
+        head = List::Head(Rc::new(ListHead {
+            val: v.clone(),
+            tail: head,
+        }));
+    }
+
+    Ok(head)
 }
 
 #[inline(always)]
