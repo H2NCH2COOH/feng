@@ -84,7 +84,7 @@ fn recursive_upeval() {
     (define (quote! dep) (upeval dep))
     (define (quote! a) dep)
     (cond
-        (atom-eq? dep (quote! aaaaaaaaa))
+        (atom-eq? dep (quote! aaaaaaaaaaaaa))
             (eval-at (quote! a) ctx)
         else
             (f (upctx ctx) (atom-concat dep (quote! a)))))))
