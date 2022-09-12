@@ -207,7 +207,17 @@ pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
     let mut ctx = create_root_context();
 
     src.iter().try_fold(EMPTY_LIST, |_, val| {
-        eval(&val.into(), &mut ctx, val.source_info())
+        eval(&val.into(), &mut ctx, val.source_info()).map_err(|e| match e {
+            Error::TailRecursionRequest {
+                source_info,
+                args: _,
+                map: _,
+            } => Error::CantTailRecursion {
+                source_info,
+                msg: "request reached root".to_string(),
+            },
+            other => other,
+        })
     })
 }
 
@@ -309,12 +319,36 @@ fn call_fexpr(
     let mut ctx = Context::new(parent_ctx);
     apply_args(&fexpr.arg_list, args, &mut ctx, source_info)?;
 
-    let mut ret = EMPTY_LIST;
-    for v in fexpr.body.into_iter() {
-        ret = eval(v, &mut ctx, source_info)?;
-    }
+    loop {
+        let mut ret = Ok(EMPTY_LIST);
+        for v in fexpr.body.into_iter() {
+            match ret {
+                Err(Error::TailRecursionRequest {
+                    source_info,
+                    args: _,
+                    map: _,
+                }) => Err(Error::CantTailRecursion {
+                    source_info,
+                    msg: "not the last value of a fexpr body".to_string(),
+                }),
+                Err(e) => Err(e),
+                Ok(_) => Ok(()),
+            }?;
+            ret = eval(v, &mut ctx, source_info);
+        }
 
-    Ok(ret)
+        match ret {
+            Ok(v) => break Ok(v),
+            Err(Error::TailRecursionRequest {
+                source_info,
+                args,
+                map,
+            }) => {
+                todo!()
+            }
+            Err(e) => break Err(e),
+        }
+    }
 }
 
 #[inline(always)]
@@ -661,11 +695,23 @@ fn func_is_fexpr(
 
 fn func_begin(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
     let mut ctx = Context::new(parent_ctx);
-    let mut rst = EMPTY_LIST;
+    let mut rst = Ok(EMPTY_LIST);
     for v in args {
-        rst = eval(v, &mut ctx, source_info)?;
+        match rst {
+            Err(Error::TailRecursionRequest {
+                source_info,
+                args: _,
+                map: _,
+            }) => Err(Error::CantTailRecursion {
+                source_info,
+                msg: "not the last argument of a `begin`".to_string(),
+            }),
+            Err(e) => Err(e),
+            Ok(_) => Ok(()),
+        }?;
+        rst = eval(v, &mut ctx, source_info);
     }
-    Ok(rst)
+    rst
 }
 
 fn func_quote(
