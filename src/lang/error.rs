@@ -1,4 +1,6 @@
 use super::source::SourceInfo;
+use super::value::{Atom, List, Value};
+use std::collections::HashMap;
 
 pub enum Error {
     Io(std::io::Error),
@@ -12,11 +14,11 @@ pub enum Error {
     },
     CantEval {
         source_info: SourceInfo,
-        val: super::value::Value,
+        val: Value,
     },
     CantCall {
         source_info: SourceInfo,
-        val: super::value::Value,
+        val: Value,
     },
     BadArgsNum {
         source_info: SourceInfo,
@@ -33,9 +35,18 @@ pub enum Error {
     },
     Redefinition {
         source_info: SourceInfo,
-        key: super::value::Atom,
-        old_val: super::value::Value,
-        new_val: super::value::Value,
+        key: Atom,
+        old_val: Value,
+        new_val: Value,
+    },
+    TailRecursionRequest {
+        source_info: SourceInfo,
+        args: List,
+        map: HashMap<Atom, Value>,
+    },
+    CantTailRecursion {
+        source_info: SourceInfo,
+        msg: String,
     },
 }
 
@@ -82,6 +93,20 @@ impl std::fmt::Display for Error {
                     "Can't redefine {} from {} to {}\n\tAt {}",
                     key, old_val, new_val, source_info
                 )
+            }
+            Error::TailRecursionRequest {
+                source_info,
+                args: _,
+                map: _,
+            } => {
+                write!(
+                    f,
+                    "An unhandled tail recursion (this error shouldn't be seen)\n\tAt {}",
+                    source_info
+                )
+            }
+            Error::CantTailRecursion { source_info, msg } => {
+                write!(f, "Can't tail recursion: {}\n\tAt {}", msg, source_info)
             }
         }
     }
