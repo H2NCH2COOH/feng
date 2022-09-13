@@ -39,7 +39,11 @@ fn basic_upeval() {
     (define! a 2)
     (define! b a)
     (assert (atom-eq? (upeval! a) 1))
-    (assert (atom-eq? (upeval b) 1)))
+    (assert (atom-eq? (upeval b) 1))
+    (begin!
+        (define! a 3)
+        (assert (atom-eq? (upeval (quote! (upeval! a))) 1))
+        (assert (atom-eq? (upeval (quote! (upeval b))) 1))))
 (assert (atom-eq? a (quote! 1)))
 ";
     eval_source(&parse_str(code).unwrap()).unwrap();
@@ -87,7 +91,7 @@ fn recursive_upeval() {
         (atom-eq? dep (quote! aaaaaaaaaaaaa))
             (eval-at (quote! a) ctx)
         else
-            (f (upctx ctx) (atom-concat dep (quote! a)))))))
+            (tail-recur! (upctx ctx) (atom-concat dep (quote! a)))))))
 
 (define! a 1)
 (begin!
