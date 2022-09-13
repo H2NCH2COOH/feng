@@ -368,6 +368,7 @@ fn call_function(
         Function::EvalF => func_eval(args, ctx, source_info),
         Function::UpEval => func_upeval(&eval_args(args, ctx, source_info)?, ctx, source_info),
         Function::UpEvalF => func_upeval(args, ctx, source_info),
+        Function::TailRecurF => func_tail_recur(args, ctx, source_info),
         Function::Define => func_define(&eval_args(args, ctx, source_info)?, ctx, source_info),
         Function::DefineF => func_define(args, ctx, source_info),
         Function::AtomConcat => {
@@ -532,6 +533,14 @@ fn func_upeval(
 
     let mut ctx = Context::new_upeval(parent_ctx);
     eval(val, &mut ctx, source_info)
+}
+
+fn func_tail_recur(
+    args: &List,
+    parent_ctx: &Context,
+    source_info: &SourceInfo,
+) -> Result<Value, Error> {
+    todo!()
 }
 
 fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
