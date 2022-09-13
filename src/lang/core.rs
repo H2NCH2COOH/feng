@@ -11,38 +11,16 @@ use std::rc::Rc;
 #[derive(Debug)]
 struct Context<'a> {
     parent: Option<&'a Self>,
-    ignore_in_upeval: bool,
-    is_recursion_point: bool,
     map: HashMap<Atom, Value>,
     map_weak: HashMap<Atom, Value>,
+    is_upeval: bool,
 }
 
 impl<'a> Context<'a> {
     fn new(parent: &'a Context) -> Self {
         Self {
             parent: Some(parent),
-            ignore_in_upeval: false,
-            is_recursion_point: false,
-            map: HashMap::new(),
-            map_weak: HashMap::new(),
-        }
-    }
-
-    fn new_fexpr_base(parent: &'a Context) -> Self {
-        Self {
-            parent: Some(parent),
-            ignore_in_upeval: true,
-            is_recursion_point: true,
-            map: HashMap::new(),
-            map_weak: HashMap::new(),
-        }
-    }
-
-    fn new_fexpr_curr(parent: &'a Context) -> Self {
-        Self {
-            parent: Some(parent),
-            ignore_in_upeval: false,
-            is_recursion_point: false,
+            is_upeval: false,
             map: HashMap::new(),
             map_weak: HashMap::new(),
         }
@@ -51,8 +29,7 @@ impl<'a> Context<'a> {
     fn new_root() -> Self {
         Self {
             parent: None,
-            ignore_in_upeval: false,
-            is_recursion_point: false,
+            is_upeval: false,
             map: HashMap::new(),
             map_weak: HashMap::new(),
         }
@@ -61,8 +38,7 @@ impl<'a> Context<'a> {
     fn new_upeval(parent: &'a Context) -> Self {
         Self {
             parent: Some(parent),
-            ignore_in_upeval: true,
-            is_recursion_point: false,
+            is_upeval: true,
             map: HashMap::new(),
             map_weak: HashMap::new(),
         }
@@ -231,17 +207,7 @@ pub fn eval_source(src: &[source::Value]) -> Result<Value, Error> {
     let mut ctx = create_root_context();
 
     src.iter().try_fold(EMPTY_LIST, |_, val| {
-        eval(&val.into(), &mut ctx, val.source_info()).map_err(|e| match e {
-            Error::TailRecursionRequest {
-                source_info,
-                args: _,
-                map: _,
-            } => Error::CantTailRecursion {
-                source_info,
-                msg: "request reached root".to_string(),
-            },
-            other => other,
-        })
+        eval(&val.into(), &mut ctx, val.source_info())
     })
 }
 
@@ -318,6 +284,7 @@ fn eval_args(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result
     let mut args_vec: Vec<Value> = Vec::new();
     for v in args {
         let rst = eval(v, ctx, source_info)?;
+        println!("{} -> {}", v, rst);
         args_vec.push(rst);
     }
 
@@ -332,53 +299,22 @@ fn eval_args(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result
     Ok(head)
 }
 
+#[inline(always)]
 fn call_fexpr(
     fexpr: &Fexpr,
     args: &List,
     parent_ctx: &Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
-    let mut curr_source_info = source_info.clone();
-    let mut base_ctx = Context::new_fexpr_base(parent_ctx);
-    let mut curr_args = args.clone();
+    let mut ctx = Context::new(parent_ctx);
+    apply_args(&fexpr.arg_list, args, &mut ctx, source_info)?;
 
-    loop {
-        let mut ctx = Context::new_fexpr_curr(&base_ctx);
-        apply_args(&fexpr.arg_list, &curr_args, &mut ctx, &curr_source_info)?;
-
-        let mut ret = Ok(EMPTY_LIST);
-        for v in fexpr.body.into_iter() {
-            match ret {
-                Err(Error::TailRecursionRequest {
-                    source_info,
-                    args: _,
-                    map: _,
-                }) => Err(Error::CantTailRecursion {
-                    source_info,
-                    msg: "not the last value of a fexpr body".to_string(),
-                }),
-                Err(e) => Err(e),
-                Ok(_) => Ok(()),
-            }?;
-            ret = eval(v, &mut ctx, &curr_source_info);
-        }
-
-        match ret {
-            Err(Error::TailRecursionRequest {
-                source_info,
-                args,
-                map,
-            }) => {
-                for (k, v) in map {
-                    define_weak(&k, v, &mut base_ctx);
-                }
-                curr_args = args;
-                curr_source_info = source_info;
-            }
-            Err(e) => break Err(e),
-            Ok(v) => break Ok(v),
-        }
+    let mut ret = EMPTY_LIST;
+    for v in fexpr.body.into_iter() {
+        ret = eval(v, &mut ctx, source_info)?;
     }
+
+    Ok(ret)
 }
 
 #[inline(always)]
@@ -398,7 +334,6 @@ fn call_function(
         Function::EvalF => func_eval(args, ctx, source_info),
         Function::UpEval => func_upeval(&eval_args(args, ctx, source_info)?, ctx, source_info),
         Function::UpEvalF => func_upeval(args, ctx, source_info),
-        Function::TailRecurF => func_tail_recur(args, ctx, source_info),
         Function::Define => func_define(&eval_args(args, ctx, source_info)?, ctx, source_info),
         Function::DefineF => func_define(args, ctx, source_info),
         Function::AtomConcat => {
@@ -544,7 +479,7 @@ fn func_upeval(
     }?;
 
     let mut parent_ctx = parent_ctx;
-    while parent_ctx.ignore_in_upeval {
+    while parent_ctx.is_upeval {
         if let Some(p) = parent_ctx.parent {
             parent_ctx = p;
         } else {
@@ -563,42 +498,6 @@ fn func_upeval(
 
     let mut ctx = Context::new_upeval(parent_ctx);
     eval(val, &mut ctx, source_info)
-}
-
-fn func_tail_recur(args: &List, ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    let mut map = HashMap::new();
-    let mut ctx: &Context = ctx;
-
-    loop {
-        for (k, v) in &ctx.map {
-            if map.get(k).is_none() {
-                map.insert(k.clone(), v.clone());
-            }
-        }
-
-        for (k, v) in &ctx.map_weak {
-            if map.get(k).is_none() {
-                map.insert(k.clone(), v.clone());
-            }
-        }
-
-        match ctx.parent {
-            Some(p) => {
-                ctx = p;
-            }
-            None => break,
-        }
-
-        if ctx.is_recursion_point {
-            break;
-        }
-    }
-
-    Err(Error::TailRecursionRequest {
-        source_info: source_info.clone(),
-        args: args.clone(),
-        map,
-    })
 }
 
 fn func_define(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result<Value, Error> {
@@ -762,23 +661,11 @@ fn func_is_fexpr(
 
 fn func_begin(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
     let mut ctx = Context::new(parent_ctx);
-    let mut rst = Ok(EMPTY_LIST);
+    let mut rst = EMPTY_LIST;
     for v in args {
-        match rst {
-            Err(Error::TailRecursionRequest {
-                source_info,
-                args: _,
-                map: _,
-            }) => Err(Error::CantTailRecursion {
-                source_info,
-                msg: "not the last argument of a `begin`".to_string(),
-            }),
-            Err(e) => Err(e),
-            Ok(_) => Ok(()),
-        }?;
-        rst = eval(v, &mut ctx, source_info);
+        rst = eval(v, &mut ctx, source_info)?;
     }
-    rst
+    Ok(rst)
 }
 
 fn func_quote(

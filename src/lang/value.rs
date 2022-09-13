@@ -63,7 +63,6 @@ define_funcs!(
     ("eval!", EvalF),
     ("upeval", UpEval),
     ("upeval!", UpEvalF),
-    ("tail-recur!", TailRecurF),
     ("define", Define),
     ("define!", DefineF),
     ("atom-concat", AtomConcat),
