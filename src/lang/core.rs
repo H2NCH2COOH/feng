@@ -284,7 +284,6 @@ fn eval_args(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result
     let mut args_vec: Vec<Value> = Vec::new();
     for v in args {
         let rst = eval(v, ctx, source_info)?;
-        println!("{} -> {}", v, rst);
         args_vec.push(rst);
     }
 
