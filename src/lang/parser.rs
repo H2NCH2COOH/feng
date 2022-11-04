@@ -132,15 +132,26 @@ where
     let mut name = String::new();
     let source_info = source.current_pos();
 
-    while let Some(c) = source.current() {
-        if c.is_whitespace() || c == ')' {
-            break;
-        } else if c == '(' {
-            return Err(syntax_err(source, "Invalid charactor '('".to_string()));
-        } else {
-            name.push(c);
-        }
+    loop {
+        let c = match source.current() {
+            Some('\\') => {
+                source.next()?;
+                source
+                    .current()
+                    .ok_or_else(|| syntax_err(source, "Expect character after '\\'".to_string()))
+            }
+            Some('(') => Err(syntax_err(source, "Invalid charactor '('".to_string())),
+            Some(c) => {
+                if c.is_whitespace() || c == ')' {
+                    break;
+                } else {
+                    Ok(c)
+                }
+            }
+            None => break,
+        }?;
 
+        name.push(c);
         source.next()?;
     }
 
