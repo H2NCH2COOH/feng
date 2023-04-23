@@ -62,6 +62,22 @@ fn basic_fexpr() {
 }
 
 #[test]
+fn basic_fexpr_recur() {
+    let code = "\
+(assert (atom-eq? ((fexpr! (l) (
+    (define (quote! f) (car (upeval l)))
+    (define (quote! r) (cdr (upeval l)))
+    (cond
+        r
+            (atom-concat f (recur! r))
+        else
+            f)))
+(list 1 2 3)) 123))
+";
+    eval_source(&parse_str(code).unwrap()).unwrap();
+}
+
+#[test]
 fn recursive_upeval() {
     let code = "\
 (define thisctx ())
@@ -78,7 +94,7 @@ fn recursive_upeval() {
         (define (quote! ctx) (upeval ctx))
         (cond
             ctx
-                (list upeval! (_build_upeval_chain v (cdr ctx)))
+                (list upeval! (recur! v (cdr ctx)))
             else
                 (list upeval! v)))))
     (upeval (_build_upeval_chain (upeval v) (upeval ctx))))))
@@ -91,7 +107,7 @@ fn recursive_upeval() {
         (atom-eq? dep (quote! aaaaaaaaa))
             (eval-at (quote! a) ctx)
         else
-            (f (upctx ctx) (atom-concat dep (quote! a)))))))
+            (recur! (upctx ctx) (atom-concat dep (quote! a)))))))
 
 (define! a 1)
 (begin!

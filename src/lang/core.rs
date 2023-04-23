@@ -2,7 +2,7 @@ use super::error::Error;
 use super::source;
 use super::source::SourceInfo;
 use super::value::{
-    ArgList, Atom, Fexpr, Function, List, ListHead, Value, EMPTY_LIST, FALSE, TRUE,
+    ArgList, Atom, Fexpr, Function, List, ListHead, Value, EMPTY_LIST, FALSE, RECUR_F, TRUE,
 };
 use std::collections::HashMap;
 use std::io::Write;
@@ -235,6 +235,8 @@ fn call(list: ListRef, ctx: &mut Context, source_info: &SourceInfo) -> Result<Va
     let callable = match &callable {
         Value::Atom(atom) => lookup(atom, ctx, source_info)?,
         Value::SourceAtom(atom) => lookup(&atom.into(), ctx, source_info)?,
+        Value::List(list) => call(list.into(), ctx, source_info)?,
+        Value::SourceList(list) => call(list.into(), ctx, &list.source_info)?,
         _ => callable,
     };
 
@@ -306,6 +308,10 @@ fn call_fexpr(
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
     let mut ctx = Context::new(parent_ctx);
+
+    // Define `recur!`
+    define_weak(&RECUR_F(), Value::Fexpr(fexpr.clone()), &mut ctx);
+
     apply_args(&fexpr.arg_list, args, &mut ctx, source_info)?;
 
     let mut ret = EMPTY_LIST;

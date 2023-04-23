@@ -102,10 +102,15 @@ pub const EMPTY_LIST: Value = Value::List(List::Empty);
 pub const FALSE: Value = EMPTY_LIST;
 thread_local! {
     static TRUE_TLV: Value = Value::Atom(Atom::new("true"));
+    static RECUR_F_TLV: Atom = Atom::new("recur!");
 }
 #[allow(non_snake_case)]
 pub fn TRUE() -> Value {
     TRUE_TLV.with(|v| v.clone())
+}
+#[allow(non_snake_case)]
+pub fn RECUR_F() -> Atom {
+    RECUR_F_TLV.with(|v| v.clone())
 }
 
 impl Atom {
