@@ -56,7 +56,7 @@ fn basic_fexpr() {
 (assert (f! 1 1))
 
 (define g! (fexpr! args ((eval (cons (quote! atom-concat) args)))))
-(assert (g! 1 2 3) 123)
+(assert (atom-eq? (g! 1 2 3) 123))
 ";
     eval_source(&parse_str(code).unwrap()).unwrap();
 }
@@ -84,9 +84,9 @@ fn recursive_upeval() {
 (define upctx (fexpr! args (
     (cond
         args
-            (cons (quote! UP) (upeval (car args)))))))
+            (cons (quote! UP) (upeval (car args)))
         else
-            (quote! (UP))
+            (quote! (UP))))))
 
 (define eval-at (fexpr! (v ctx) (
     (define _build_upeval_chain (fexpr! (v ctx) (
@@ -111,6 +111,7 @@ fn recursive_upeval() {
 
 (define! a 1)
 (begin!
+    (define! a 2)
     (assert (atom-eq? (f (upctx) (quote! a)) 1)))
 (assert (atom-eq? (f thisctx (quote! a)) 1))
 ";
