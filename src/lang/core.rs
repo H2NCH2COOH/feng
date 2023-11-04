@@ -9,39 +9,115 @@ use std::io::Write;
 use std::rc::Rc;
 
 #[derive(Debug)]
-struct Context<'a> {
-    parent: Option<&'a Self>,
+enum Context<'a> {
+    Root(ContextRoot),
+    Basic(ContextBasic<'a>),
+    Upeval(ContextUpeval<'a>),
+    Fexpr(ContextFexpr<'a>),
+}
+
+#[derive(Debug)]
+struct ContextRoot {
     map: HashMap<Atom, Value>,
     map_weak: HashMap<Atom, Value>,
-    is_upeval: bool,
+}
+
+#[derive(Debug)]
+struct ContextBasic<'a> {
+    parent: &'a Context<'a>,
+    map: HashMap<Atom, Value>,
+    map_weak: HashMap<Atom, Value>,
+}
+
+#[derive(Debug)]
+struct ContextUpeval<'a> {
+    parent: &'a Context<'a>,
+    map: HashMap<Atom, Value>,
+    map_weak: HashMap<Atom, Value>,
+}
+
+#[derive(Debug)]
+struct ContextFexpr<'a> {
+    parent: &'a Context<'a>,
+    map: HashMap<Atom, Value>,
+    map_weak: HashMap<Atom, Value>,
 }
 
 impl<'a> Context<'a> {
-    fn new(parent: &'a Context) -> Self {
-        Self {
-            parent: Some(parent),
-            is_upeval: false,
+    fn new_root() -> Self {
+        Self::Root(ContextRoot {
             map: HashMap::new(),
             map_weak: HashMap::new(),
-        }
+        })
     }
 
-    fn new_root() -> Self {
-        Self {
-            parent: None,
-            is_upeval: false,
+    fn new_basic(parent: &'a Context) -> Self {
+        Self::Basic(ContextBasic {
+            parent,
             map: HashMap::new(),
             map_weak: HashMap::new(),
-        }
+        })
     }
 
     fn new_upeval(parent: &'a Context) -> Self {
-        Self {
-            parent: Some(parent),
-            is_upeval: true,
+        Self::Upeval(ContextUpeval {
+            parent,
             map: HashMap::new(),
             map_weak: HashMap::new(),
+        })
+    }
+
+    fn new_fexpr(parent: &'a Context) -> Self {
+        Self::Fexpr(ContextFexpr {
+            parent,
+            map: HashMap::new(),
+            map_weak: HashMap::new(),
+        })
+    }
+
+    fn parent(&self) -> Option<&Self> {
+        match self {
+            Self::Root(_) => None,
+            Self::Basic(c) => Some(c.parent),
+            Self::Upeval(c) => Some(c.parent),
+            Self::Fexpr(c) => Some(c.parent),
         }
+    }
+
+    fn lookup(&self, key: &Atom) -> Option<&Value> {
+        match self {
+            Self::Root(c) => c.map.get(key),
+            Self::Basic(c) => c.map.get(key),
+            Self::Upeval(c) => c.map.get(key),
+            Self::Fexpr(c) => c.map.get(key),
+        }
+    }
+
+    fn lookup_weak(&self, key: &Atom) -> Option<&Value> {
+        match self {
+            Self::Root(c) => c.map_weak.get(key),
+            Self::Basic(c) => c.map_weak.get(key),
+            Self::Upeval(c) => c.map_weak.get(key),
+            Self::Fexpr(c) => c.map_weak.get(key),
+        }
+    }
+
+    fn define(&mut self, key: Atom, val: Value) {
+        match self {
+            Self::Root(c) => c.map.insert(key, val),
+            Self::Basic(c) => c.map.insert(key, val),
+            Self::Upeval(c) => c.map.insert(key, val),
+            Self::Fexpr(c) => c.map.insert(key, val),
+        };
+    }
+
+    fn define_weak(&mut self, key: Atom, val: Value) {
+        match self {
+            Self::Root(c) => c.map_weak.insert(key, val),
+            Self::Basic(c) => c.map_weak.insert(key, val),
+            Self::Upeval(c) => c.map_weak.insert(key, val),
+            Self::Fexpr(c) => c.map_weak.insert(key, val),
+        };
     }
 }
 
@@ -158,7 +234,7 @@ fn define(
     ctx: &mut Context,
     source_info: &SourceInfo,
 ) -> Result<(), Error> {
-    match ctx.map.get(key) {
+    match ctx.lookup(key) {
         Some(v) => Err(Error::Redefinition {
             source_info: source_info.clone(),
             key: key.clone(),
@@ -166,22 +242,22 @@ fn define(
             new_val: val,
         }),
         None => {
-            ctx.map.insert(key.clone(), val);
+            ctx.define(key.clone(), val);
             Ok(())
         }
     }
 }
 
 fn define_weak(key: &Atom, val: Value, ctx: &mut Context) {
-    ctx.map_weak.insert(key.clone(), val);
+    ctx.define_weak(key.clone(), val);
 }
 
 fn lookup(key: &Atom, ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    match ctx.map.get(key) {
+    match ctx.lookup(key) {
         Some(val) => Ok(val.clone()),
-        None => match ctx.map_weak.get(key) {
+        None => match ctx.lookup_weak(key) {
             Some(val) => Ok(val.clone()),
-            None => match &ctx.parent {
+            None => match ctx.parent() {
                 Some(parent) => lookup(key, parent, source_info),
                 None => Ok(key.clone().into()),
             },
@@ -307,7 +383,7 @@ fn call_fexpr(
     parent_ctx: &Context,
     source_info: &SourceInfo,
 ) -> Result<Value, Error> {
-    let mut ctx = Context::new(parent_ctx);
+    let mut ctx = Context::new_fexpr(parent_ctx);
 
     // Define `recur!`
     define_weak(&RECUR_F(), Value::Fexpr(fexpr.clone()), &mut ctx);
@@ -460,7 +536,7 @@ fn func_eval(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Res
         },
     }?;
 
-    let mut ctx = Context::new(parent_ctx);
+    let mut ctx = Context::new_basic(parent_ctx);
     eval(val, &mut ctx, source_info)
 }
 
@@ -483,19 +559,16 @@ fn func_upeval(
         },
     }?;
 
-    let mut parent_ctx = parent_ctx;
-    while parent_ctx.is_upeval {
-        if let Some(p) = parent_ctx.parent {
-            parent_ctx = p;
-        } else {
-            return Err(Error::NoUpCtx {
-                source_info: source_info.clone(),
-            });
-        }
+    let mut upctx = parent_ctx;
+    loop {
+        upctx = match upctx {
+            Context::Upeval(c) => c.parent,
+            _ => break,
+        };
     }
 
-    let parent_ctx = match parent_ctx.parent {
-        Some(p) => Ok(p),
+    let parent_ctx = match upctx.parent() {
+        Some(c) => Ok(c),
         None => Err(Error::NoUpCtx {
             source_info: source_info.clone(),
         }),
@@ -665,7 +738,7 @@ fn func_is_fexpr(
 }
 
 fn func_begin(args: &List, parent_ctx: &Context, source_info: &SourceInfo) -> Result<Value, Error> {
-    let mut ctx = Context::new(parent_ctx);
+    let mut ctx = Context::new_basic(parent_ctx);
     let mut rst = EMPTY_LIST;
     for v in args {
         rst = eval(v, &mut ctx, source_info)?;
