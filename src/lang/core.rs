@@ -560,11 +560,8 @@ fn func_upeval(
     }?;
 
     let mut upctx = parent_ctx;
-    loop {
-        upctx = match upctx {
-            Context::Upeval(c) => c.parent,
-            _ => break,
-        };
+    while let Context::Upeval(c) = upctx {
+        upctx = c.parent;
     }
 
     let parent_ctx = match upctx.parent() {
