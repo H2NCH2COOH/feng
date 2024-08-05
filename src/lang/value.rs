@@ -1,5 +1,6 @@
 use super::source;
 use std::cmp::Ordering;
+use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -153,7 +154,95 @@ impl From<Atom> for Value {
     }
 }
 
-impl List {}
+impl std::ops::Drop for ListHead {
+    fn drop(&mut self) {
+        let mut val = EMPTY_LIST;
+        let mut tail = List::Empty;
+        std::mem::swap(&mut self.val, &mut val);
+        std::mem::swap(&mut self.tail, &mut tail);
+
+        let val_to_drop = match val {
+            Value::List(List::Head(h)) => Some(h),
+            Value::Fexpr(Fexpr { arg_list: _, body: List::Head(h) }) => Some(h),
+            _ => None,
+        };
+
+        let tail_to_drop = match tail {
+            List::Empty => None,
+            List::Head(h) => Some(h),
+        };
+
+        if val_to_drop.is_none() && tail_to_drop.is_none() {
+            return;
+        }
+
+        #[cfg(test)]
+        thread_local! { static IN_CALL: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
+
+        #[cfg(test)]
+        {
+            if IN_CALL.get() {
+                panic!("Recursion!");
+            } else {
+                IN_CALL.set(true);
+            }
+        }
+
+        let mut to_drop: VecDeque<ListHead> = VecDeque::new();
+        if let Some(rc) = val_to_drop {
+            if let Some(h) = Rc::into_inner(rc) {
+                to_drop.push_back(h);
+            }
+        }
+        if let Some(rc) = tail_to_drop {
+            if let Some(h) = Rc::into_inner(rc) {
+                to_drop.push_back(h);
+            }
+        }
+
+        while let Some(mut head) = to_drop.pop_front() {
+            let mut val = EMPTY_LIST;
+            let mut tail = List::Empty;
+            std::mem::swap(&mut head.val, &mut val);
+            std::mem::swap(&mut head.tail, &mut tail);
+
+            let val_to_drop = match val {
+                Value::List(List::Head(h)) => Some(h),
+                Value::Fexpr(Fexpr { arg_list: _, body: List::Head(h) }) => Some(h),
+                _ => None,
+            };
+
+            let tail_to_drop = match tail {
+                List::Empty => None,
+                List::Head(h) => Some(h),
+            };
+
+            if let Some(rc) = val_to_drop {
+                if let Some(h) = Rc::into_inner(rc) {
+                    to_drop.push_back(h);
+                }
+            }
+            if let Some(rc) = tail_to_drop {
+                if let Some(h) = Rc::into_inner(rc) {
+                    to_drop.push_back(h);
+                }
+            }
+        }
+
+        #[cfg(test)]
+        IN_CALL.set(false);
+    }
+}
+
+#[test]
+fn deeply_nested_drop() {
+    (0..10000).fold(List::Empty, |rst, _| {
+        List::Head(Rc::new(ListHead {
+            val: EMPTY_LIST,
+            tail: rst,
+        }))
+    });
+}
 
 impl From<&Value> for bool {
     fn from(that: &Value) -> Self {

@@ -1,6 +1,21 @@
 use super::{eval_source, parse_str};
 
 #[test]
+fn parser() {
+    parse_str("").unwrap();
+    parse_str("()").unwrap();
+    parse_str("a b c () a ").unwrap();
+    parse_str(
+        " a b c (
+    ) a ",
+    )
+    .unwrap();
+    parse_str("()()()()").unwrap();
+    let code = "(cons a ".repeat(10000) + "()" + &" )".repeat(10000);
+    parse_str(&code).unwrap();
+}
+
+#[test]
 fn basic() {
     let code = "\
 (assert true)

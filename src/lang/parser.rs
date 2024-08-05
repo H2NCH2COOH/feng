@@ -86,42 +86,78 @@ where
         return Ok(result);
     }
 
-    while let Some(v) = parse_value(&mut source, false)? {
+    while let Some(v) = parse_value(&mut source)? {
         result.push(v);
     }
 
     Ok(result)
 }
 
-fn parse_value<S>(source: &mut Source<S>, within_list: bool) -> Result<Option<Value>, Error>
+fn parse_value<S>(source: &mut Source<S>) -> Result<Option<Value>, Error>
 where
     S: Iterator<Item = Result<char, Error>>,
 {
-    // Skip leading whitespace
+    let mut stack: Vec<List> = Vec::new();
     loop {
-        let cur = match source.current() {
-            Some(c) => c,
-            None => {
-                return Ok(None);
-            }
-        };
-        if !cur.is_whitespace() {
-            break;
-        }
-        source.next()?;
-    }
+        match source.current() {
+            Some('(') => {
+                source.next()?;
 
-    match source.current() {
-        Some('(') => Ok(Some(Value::List(parse_list(source)?))),
-        Some(')') => {
-            if within_list {
-                Ok(None)
-            } else {
-                Err(syntax_err(source, "Unexcpected ')'".to_string()))
+                stack.push(List {
+                    list: Rc::new(Vec::new()),
+                    source_info: source.current_pos(),
+                });
+            }
+            Some(')') => {
+                source.next()?;
+
+                match stack.pop() {
+                    None => {
+                        return Err(syntax_err(source, "Unexcpected ')'".to_string()));
+                    }
+                    Some(mut list) => {
+                        Rc::get_mut(&mut list.list).unwrap().shrink_to_fit();
+                        match stack.last_mut() {
+                            None => {
+                                return Ok(Some(Value::List(list)));
+                            }
+                            Some(parent) => {
+                                Rc::get_mut(&mut parent.list)
+                                    .unwrap()
+                                    .push(Value::List(list));
+                            }
+                        }
+                    }
+                }
+            }
+            Some(c) => {
+                // Skip leading whitespace
+                if c.is_whitespace() {
+                    source.next()?;
+                    continue;
+                }
+
+                let atom = Value::Atom(parse_atom(source)?);
+                match stack.last_mut() {
+                    None => {
+                        /*
+                         * Just a single Atom not in a list.
+                         */
+                        return Ok(Some(atom));
+                    }
+                    Some(list) => {
+                        Rc::get_mut(&mut list.list).unwrap().push(atom);
+                    }
+                }
+            }
+            None => {
+                if stack.is_empty() {
+                    return Ok(None);
+                } else {
+                    return Err(syntax_err(source, "Excepting ')' found EOF".to_string()));
+                }
             }
         }
-        Some(_) => Ok(Some(Value::Atom(parse_atom(source)?))),
-        None => unreachable!(),
     }
 }
 
@@ -157,40 +193,6 @@ where
 
     Ok(Atom {
         name: name.into(),
-        source_info,
-    })
-}
-
-fn parse_list<S>(source: &mut Source<S>) -> Result<List, Error>
-where
-    S: Iterator<Item = Result<char, Error>>,
-{
-    assert!(source.current().unwrap() == '(');
-
-    let source_info = source.current_pos();
-
-    source.next()?; // Skip '('
-
-    let mut buf = Vec::new();
-    loop {
-        match parse_value(source, true)? {
-            Some(v) => {
-                buf.push(v);
-            }
-            None => match source.current() {
-                Some(')') => break,
-                Some(_) => unreachable!(),
-                None => {
-                    return Err(syntax_err(source, "Excepting ')' found EOF".to_string()));
-                }
-            },
-        }
-    }
-
-    source.next()?; // Skip ')'
-
-    Ok(List {
-        list: buf.into(),
         source_info,
     })
 }
