@@ -19,6 +19,7 @@ where
     parser::parse(name, chars::Chars::new(stream))
 }
 
+#[cfg(test)]
 pub fn parse_str(s: &str) -> Result<Vec<source::Value>, Error> {
     parser::parse(&format!("str:`{:.10}...'", s.trim()), s.chars().map(Ok))
 }
