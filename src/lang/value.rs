@@ -163,7 +163,10 @@ impl std::ops::Drop for ListHead {
 
         let val_to_drop = match val {
             Value::List(List::Head(h)) => Some(h),
-            Value::Fexpr(Fexpr { arg_list: _, body: List::Head(h) }) => Some(h),
+            Value::Fexpr(Fexpr {
+                arg_list: _,
+                body: List::Head(h),
+            }) => Some(h),
             _ => None,
         };
 
@@ -208,7 +211,10 @@ impl std::ops::Drop for ListHead {
 
             let val_to_drop = match val {
                 Value::List(List::Head(h)) => Some(h),
-                Value::Fexpr(Fexpr { arg_list: _, body: List::Head(h) }) => Some(h),
+                Value::Fexpr(Fexpr {
+                    arg_list: _,
+                    body: List::Head(h),
+                }) => Some(h),
                 _ => None,
             };
 

@@ -2,7 +2,7 @@ use super::error::Error;
 use super::source;
 use super::source::SourceInfo;
 use super::value::{
-    ArgList, Atom, Fexpr, Function, List, ListHead, Value, EMPTY_LIST, FALSE, RECUR_F, TRUE,
+    ArgList, Atom, EMPTY_LIST, FALSE, Fexpr, Function, List, ListHead, RECUR_F, TRUE, Value,
 };
 use std::collections::HashMap;
 use std::io::Write;
@@ -509,7 +509,7 @@ fn func_cond(args: &List, ctx: &mut Context, source_info: &SourceInfo) -> Result
                 break Err(Error::BadFuncArgs {
                     source_info: source_info.clone(),
                     msg: "cond: must have an even number of arguments".to_string(),
-                })
+                });
             }
             Some(v) => v,
         };
@@ -680,7 +680,7 @@ fn func_atom_eq(
                 return Err(Error::BadFuncArgs {
                     source_info: source_info.clone(),
                     msg: format!("atom-eq?: argument #{} `{}' is not an atom", idx, v),
-                })
+                });
             }
         };
     }
