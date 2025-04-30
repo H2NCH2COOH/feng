@@ -20,7 +20,7 @@ where
     }
 }
 
-impl<'a, B> Iterator for Chars<'a, B>
+impl<B> Iterator for Chars<'_, B>
 where
     B: Iterator<Item = std::io::Result<u8>>,
 {
