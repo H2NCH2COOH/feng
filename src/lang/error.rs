@@ -34,8 +34,8 @@ pub enum Error {
     Redefinition {
         source_info: SourceInfo,
         key: super::value::Atom,
-        old_val: super::value::Value,
-        new_val: super::value::Value,
+        old_val: Box<super::value::Value>,
+        new_val: Box<super::value::Value>,
     },
 }
 

@@ -238,8 +238,8 @@ fn define(
         Some(v) => Err(Error::Redefinition {
             source_info: source_info.clone(),
             key: key.clone(),
-            old_val: v.clone(),
-            new_val: val,
+            old_val: Box::new(v.clone()),
+            new_val: Box::new(val),
         }),
         None => {
             ctx.define(key.clone(), val);
