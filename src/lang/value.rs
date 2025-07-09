@@ -329,7 +329,7 @@ impl std::fmt::Display for Fexpr {
                 if !list.is_empty() {
                     write!(f, "{}", list[0])?;
                     for atom in &list[1..] {
-                        write!(f, " {}", atom)?;
+                        write!(f, " {atom}")?;
                     }
                 }
                 write!(f, ") {})", self.body)
@@ -342,12 +342,12 @@ impl std::fmt::Display for Fexpr {
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Atom(atom) => write!(f, "{}", atom),
-            Self::List(list) => write!(f, "{}", list),
-            Self::SourceAtom(source_atom) => write!(f, "{}", source_atom),
-            Self::SourceList(source_list) => write!(f, "{}", source_list),
-            Self::Fexpr(fexpr) => write!(f, "{}", fexpr),
-            Self::Function(func) => write!(f, "{}", func),
+            Self::Atom(atom) => write!(f, "{atom}"),
+            Self::List(list) => write!(f, "{list}"),
+            Self::SourceAtom(source_atom) => write!(f, "{source_atom}"),
+            Self::SourceList(source_list) => write!(f, "{source_list}"),
+            Self::Fexpr(fexpr) => write!(f, "{fexpr}"),
+            Self::Function(func) => write!(f, "{func}"),
         }
     }
 }

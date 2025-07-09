@@ -89,6 +89,6 @@ fn print_fexpr<W: Write>(out: &mut W, fexpr: &Fexpr) -> Result<(), Error> {
 }
 
 fn print_function<W: Write>(out: &mut W, func: &Function) -> Result<(), Error> {
-    write!(out, "{}", func)?;
+    write!(out, "{func}")?;
     Ok(())
 }

@@ -42,17 +42,17 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Io(e) => write!(f, "Io Error: {}", e),
-            Error::Utf8(e) => write!(f, "Invalid bytes as UTF-8: {:?}", e),
+            Error::Io(e) => write!(f, "Io Error: {e}"),
+            Error::Utf8(e) => write!(f, "Invalid bytes as UTF-8: {e:?}"),
             Error::Syntax { source_info, msg } => {
-                write!(f, "Syntax error: {}\n\tAt {}", msg, source_info)
+                write!(f, "Syntax error: {msg}\n\tAt {source_info}")
             }
-            Error::NoUpCtx { source_info } => write!(f, "Can't go upwards\n\tAt {}", source_info),
+            Error::NoUpCtx { source_info } => write!(f, "Can't go upwards\n\tAt {source_info}"),
             Error::CantEval { source_info, val } => {
-                write!(f, "Can't eval value: {}\n\tAt {}", val, source_info)
+                write!(f, "Can't eval value: {val}\n\tAt {source_info}")
             }
             Error::CantCall { source_info, val } => {
-                write!(f, "Can't call value: {}\n\tAt {}", val, source_info)
+                write!(f, "Can't call value: {val}\n\tAt {source_info}")
             }
             Error::BadArgsNum {
                 source_info,
@@ -61,15 +61,14 @@ impl std::fmt::Display for Error {
             } => {
                 write!(
                     f,
-                    "Bad number of arguments, expected {}, found {}\n\tAt {}",
-                    expected, found, source_info
+                    "Bad number of arguments, expected {expected}, found {found}\n\tAt {source_info}"
                 )
             }
             Error::BadFuncArgs { source_info, msg } => {
-                write!(f, "Bad arguments: {}\n\tAt {}", msg, source_info)
+                write!(f, "Bad arguments: {msg}\n\tAt {source_info}")
             }
             Error::AssertFailed { source_info, msg } => {
-                write!(f, "Assert failed with: {}\n\tAt {}", msg, source_info)
+                write!(f, "Assert failed with: {msg}\n\tAt {source_info}")
             }
             Error::Redefinition {
                 source_info,
@@ -79,8 +78,7 @@ impl std::fmt::Display for Error {
             } => {
                 write!(
                     f,
-                    "Can't redefine {} from {} to {}\n\tAt {}",
-                    key, old_val, new_val, source_info
+                    "Can't redefine {key} from {old_val} to {new_val}\n\tAt {source_info}"
                 )
             }
         }
@@ -89,7 +87,7 @@ impl std::fmt::Display for Error {
 
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{self}")
     }
 }
 

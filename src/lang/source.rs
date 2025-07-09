@@ -99,7 +99,7 @@ impl std::fmt::Display for List {
         if !self.list.is_empty() {
             write!(f, "{}", self.list[0])?;
             for v in &self.list[1..] {
-                write!(f, " {}", v)?;
+                write!(f, " {v}")?;
             }
         }
         write!(f, ")")
@@ -109,8 +109,8 @@ impl std::fmt::Display for List {
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Atom(atom) => write!(f, "{}", atom),
-            Value::List(list) => write!(f, "{}", list),
+            Value::Atom(atom) => write!(f, "{atom}"),
+            Value::List(list) => write!(f, "{list}"),
         }
     }
 }
