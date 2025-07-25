@@ -154,28 +154,36 @@ impl From<Atom> for Value {
     }
 }
 
+fn extract_list_head_before_drop(list_head: &mut ListHead) -> [Option<ListHead>; 2] {
+    let mut val = EMPTY_LIST;
+    let mut tail = List::Empty;
+    std::mem::swap(&mut list_head.val, &mut val);
+    std::mem::swap(&mut list_head.tail, &mut tail);
+
+    let val_to_drop = match val {
+        Value::List(List::Head(h)) => Some(h),
+        Value::Fexpr(Fexpr {
+            arg_list: _,
+            body: List::Head(h),
+        }) => Some(h),
+        _ => None,
+    };
+
+    let tail_to_drop = match tail {
+        List::Empty => None,
+        List::Head(h) => Some(h),
+    };
+
+    [
+        val_to_drop.and_then(Rc::into_inner),
+        tail_to_drop.and_then(Rc::into_inner),
+    ]
+}
+
 impl std::ops::Drop for ListHead {
     fn drop(&mut self) {
-        let mut val = EMPTY_LIST;
-        let mut tail = List::Empty;
-        std::mem::swap(&mut self.val, &mut val);
-        std::mem::swap(&mut self.tail, &mut tail);
-
-        let val_to_drop = match val {
-            Value::List(List::Head(h)) => Some(h),
-            Value::Fexpr(Fexpr {
-                arg_list: _,
-                body: List::Head(h),
-            }) => Some(h),
-            _ => None,
-        };
-
-        let tail_to_drop = match tail {
-            List::Empty => None,
-            List::Head(h) => Some(h),
-        };
-
-        if val_to_drop.is_none() && tail_to_drop.is_none() {
+        let trash = extract_list_head_before_drop(self);
+        if trash.iter().flatten().count() == 0 {
             return;
         }
 
@@ -191,47 +199,15 @@ impl std::ops::Drop for ListHead {
             }
         }
 
-        let mut to_drop: VecDeque<ListHead> = VecDeque::new();
-        if let Some(rc) = val_to_drop {
-            if let Some(h) = Rc::into_inner(rc) {
-                to_drop.push_back(h);
-            }
-        }
-        if let Some(rc) = tail_to_drop {
-            if let Some(h) = Rc::into_inner(rc) {
-                to_drop.push_back(h);
-            }
+        let mut trash_queue: VecDeque<ListHead> = VecDeque::new();
+        for t in trash.into_iter().flatten() {
+            trash_queue.push_back(t);
         }
 
-        while let Some(mut head) = to_drop.pop_front() {
-            let mut val = EMPTY_LIST;
-            let mut tail = List::Empty;
-            std::mem::swap(&mut head.val, &mut val);
-            std::mem::swap(&mut head.tail, &mut tail);
-
-            let val_to_drop = match val {
-                Value::List(List::Head(h)) => Some(h),
-                Value::Fexpr(Fexpr {
-                    arg_list: _,
-                    body: List::Head(h),
-                }) => Some(h),
-                _ => None,
-            };
-
-            let tail_to_drop = match tail {
-                List::Empty => None,
-                List::Head(h) => Some(h),
-            };
-
-            if let Some(rc) = val_to_drop {
-                if let Some(h) = Rc::into_inner(rc) {
-                    to_drop.push_back(h);
-                }
-            }
-            if let Some(rc) = tail_to_drop {
-                if let Some(h) = Rc::into_inner(rc) {
-                    to_drop.push_back(h);
-                }
+        while let Some(mut head) = trash_queue.pop_front() {
+            let trash = extract_list_head_before_drop(&mut head);
+            for t in trash.into_iter().flatten() {
+                trash_queue.push_back(t);
             }
         }
 
