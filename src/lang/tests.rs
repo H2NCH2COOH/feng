@@ -16,7 +16,7 @@ fn parser() {
 }
 
 #[test]
-fn basic() {
+fn basic_assert() {
     let code = "\
 (assert true)
 (assert false)
@@ -38,7 +38,6 @@ fn basic_eval() {
 (assert (atom-eq? (eval! a) (quote! b)))
 (assert (atom-eq? (eval a) (quote! c)))
 
-
 (assert (atom-eq? d (quote! d)))
 (define c b)
 (assert (atom-eq? d (quote! c)))
@@ -50,16 +49,18 @@ fn basic_eval() {
 fn basic_upeval() {
     let code = "\
 (define! a 1)
+(assert (atom-eq? a 1))
 (begin!
     (define! a 2)
     (define! b a)
+    (assert (atom-eq? a 2))
     (assert (atom-eq? (upeval! a) 1))
     (assert (atom-eq? (upeval b) 1))
     (begin!
         (define! a 3)
+        (assert (atom-eq? a 3))
         (assert (atom-eq? (upeval (quote! (upeval! a))) 1))
         (assert (atom-eq? (upeval (quote! (upeval b))) 1))))
-(assert (atom-eq? a (quote! 1)))
 ";
     eval_source(&parse_str(code).unwrap()).unwrap();
 }
