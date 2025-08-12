@@ -206,6 +206,7 @@ impl std::ops::Drop for ListHead {
 
         while let Some(mut head) = trash_queue.pop_front() {
             let trash = extract_list_head_before_drop(&mut head);
+            std::mem::drop(head);
             for t in trash.into_iter().flatten() {
                 trash_queue.push_back(t);
             }
