@@ -347,7 +347,7 @@ fn apply_args(
                     found,
                 })
             } else {
-                for (atom, val) in std::iter::zip(list.iter(), args.into_iter()) {
+                for (atom, val) in std::iter::zip(list.iter(), args) {
                     define_weak(atom, val.clone(), ctx);
                 }
                 Ok(())
